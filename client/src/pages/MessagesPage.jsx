@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { messagesAPI, usersAPI } from '../lib/api.js';
+import { messagesAPI, usersAPI, notificationsAPI } from '../lib/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { formatDateTime, cn } from '../lib/utils.js';
 import { 
-  Mail, Send, Inbox, Trash2, Eye, Loader2, 
-  AlertCircle, Bell, MessageSquare, Plus, X 
+  Mail, Send, Inbox, Trash2, Eye, EyeOff, Loader2, 
+  AlertCircle, Bell, MessageSquare, Plus, X, Settings 
 } from 'lucide-react';
+import NotificationSettings from '../components/NotificationSettings.jsx';
 
 export default function MessagesPage() {
   const { user } = useAuth();
@@ -14,6 +15,7 @@ export default function MessagesPage() {
   const [folder, setFolder] = useState('inbox');
   const [selectedMessage, setSelectedMessage] = useState(null);
   const [showCompose, setShowCompose] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Get messages
   const { data: messagesData, isLoading } = useQuery({
@@ -36,6 +38,14 @@ export default function MessagesPage() {
   // Mark as read mutation
   const markReadMutation = useMutation({
     mutationFn: (id) => messagesAPI.markRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['messages']);
+    },
+  });
+
+  // Mark all as read mutation
+  const markAllReadMutation = useMutation({
+    mutationFn: () => messagesAPI.markAllRead(),
     onSuccess: () => {
       queryClient.invalidateQueries(['messages']);
     },
@@ -85,13 +95,22 @@ export default function MessagesPage() {
           <h1 className="text-2xl font-bold">Messages</h1>
           <p className="text-muted-foreground">Internal messaging system</p>
         </div>
-        <button
-          onClick={() => setShowCompose(true)}
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="h-4 w-4" />
-          Compose
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowSettings(true)}
+            className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
+          >
+            <Settings className="h-4 w-4" />
+            Notifications
+          </button>
+          <button
+            onClick={() => setShowCompose(true)}
+            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4" />
+            Compose
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -130,6 +149,22 @@ export default function MessagesPage() {
             </button>
           </div>
 
+          {/* Mark all as read */}
+          {folder === 'inbox' && unreadCount > 0 && (
+            <button
+              onClick={() => markAllReadMutation.mutate()}
+              disabled={markAllReadMutation.isPending}
+              className="w-full flex items-center justify-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted disabled:opacity-50"
+            >
+              {markAllReadMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <EyeOff className="h-4 w-4" />
+              )}
+              Mark all as read
+            </button>
+          )}
+
           {/* Message list */}
           <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
             {isLoading ? (
@@ -162,7 +197,7 @@ export default function MessagesPage() {
                             !message.read && folder === 'inbox' && "font-bold"
                           )}>
                             {folder === 'inbox' 
-                              ? (users.find(u => u._id === message.senderId)?.name || 'System')
+                              ? (message.senderId === 'system' ? 'System' : (users.find(u => u._id === message.senderId)?.name || 'Unknown'))
                               : (users.find(u => u._id === message.receiverId)?.name || 'Unknown')
                             }
                           </p>
@@ -188,7 +223,7 @@ export default function MessagesPage() {
                 <div>
                   <h3 className="text-lg font-semibold">{selectedMessage.subject}</h3>
                   <p className="text-sm text-muted-foreground">
-                    From: {users.find(u => u._id === selectedMessage.senderId)?.name || 'System'}
+                    From: {selectedMessage.senderId === 'system' ? 'System' : (users.find(u => u._id === selectedMessage.senderId)?.name || 'Unknown')}
                     {' • '}
                     {formatDateTime(selectedMessage.createdAt)}
                   </p>
@@ -225,6 +260,11 @@ export default function MessagesPage() {
             queryClient.invalidateQueries(['messages']);
           }}
         />
+      )}
+
+      {/* Notification Settings Modal */}
+      {showSettings && (
+        <NotificationSettings onClose={() => setShowSettings(false)} />
       )}
     </div>
   );

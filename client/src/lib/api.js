@@ -51,6 +51,7 @@ export const usersAPI = {
   list: (params) => api.get('/users', { params }),
   get: (id) => api.get(`/users/${id}`),
   create: (data) => api.post('/users', data),
+  createBulk: (users) => api.post('/users/bulk', { users }),
   update: (id, data) => api.put(`/users/${id}`, data),
   delete: (id) => api.delete(`/users/${id}`),
 };
@@ -102,6 +103,12 @@ export const departmentsAPI = {
   create: (data) => api.post('/departments', data),
   update: (id, data) => api.put(`/departments/${id}`, data),
   delete: (id) => api.delete(`/departments/${id}`),
+};
+
+export const notificationsAPI = {
+  getPreferences: () => api.get('/notifications/preferences'),
+  updatePreferences: (data) => api.put('/notifications/preferences', data),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
 };
 
 export default api;

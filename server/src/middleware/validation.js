@@ -23,18 +23,30 @@ export const validateRole = (role) => {
   return validRoles.includes(role);
 };
 
-export const validateGeoLocation = (location) => {
-  if (!location) return false;
+export const hasRequiredLocationFields = (location) => {
+  if (!location || typeof location !== 'object') return false;
+
   const { latitude, longitude, accuracy } = location;
+
   return (
-    typeof latitude === 'number' &&
-    typeof longitude === 'number' &&
-    typeof accuracy === 'number' &&
+    latitude !== undefined &&
+    latitude !== null &&
+    longitude !== undefined &&
+    longitude !== null &&
+    accuracy !== undefined &&
+    accuracy !== null &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
+    Number.isFinite(accuracy) &&
     latitude >= -90 &&
     latitude <= 90 &&
     longitude >= -180 &&
     longitude <= 180
   );
+};
+
+export const validateGeoLocation = (location) => {
+  return hasRequiredLocationFields(location);
 };
 
 export const validateShiftTime = (time) => {

@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
-import { validatePagination } from '../middleware/validation.js';
+import { validatePagination, hasRequiredLocationFields } from '../middleware/validation.js';
 import { 
   validateGeoFence, 
   calculateAttendanceStatus, 
   calculateHoursWorked 
 } from '../utils/geo.js';
+import { sendSystemNotification } from './notifications.js';
 
 const router = Router();
 
@@ -95,7 +96,7 @@ router.post('/check-in', authenticate, async (req, res, next) => {
     const today = getLocalDateString();
 
     // Validate location
-    if (!location || !location.latitude || !location.longitude || !location.accuracy) {
+    if (!hasRequiredLocationFields(location)) {
       return res.status(400).json({ 
         success: false, 
         message: 'GPS location is required' 
@@ -147,14 +148,10 @@ router.post('/check-in', authenticate, async (req, res, next) => {
     });
 
     if (existingRecord) {
-      // Check if already checked in
-      const lastEvent = existingRecord.events[existingRecord.events.length - 1];
-      if (lastEvent && lastEvent.type === 'check-in') {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Already checked in today' 
-        });
-      }
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Already checked in today' 
+      });
     }
 
     // Create check-in event
@@ -184,48 +181,34 @@ router.post('/check-in', authenticate, async (req, res, next) => {
     const workStartTime = shift?.startTime || '08:00';
     const isLate = checkInEvent.timestamp.toTimeString().slice(0, 5) > workStartTime;
 
-    // Create or update attendance record
-    let record;
-    if (existingRecord) {
-      await db.collection('records').updateOne(
-        { _id: existingRecord._id },
-        { 
-          $push: { events: checkInEvent },
-          $set: { 
-            status: isLate ? 'late' : 'present',
-            checkInTime: checkInEvent.timestamp,
-          }
-        }
-      );
-      record = await db.collection('records').findOne({ _id: existingRecord._id });
-    } else {
-      const newRecord = {
-        userId: req.user._id.toString(),
-        date: today,
-        events: [checkInEvent],
-        status: isLate ? 'late' : 'present',
-        totalHours: 0,
-        checkInTime: checkInEvent.timestamp,
-        checkOutTime: null,
-        createdAt: new Date(),
-      };
-      
-      const result = await db.collection('records').insertOne(newRecord);
-      record = { ...newRecord, _id: result.insertedId };
-    }
+    // Create attendance record
+    const newRecord = {
+      userId: req.user._id.toString(),
+      date: today,
+      events: [checkInEvent],
+      status: isLate ? 'late' : 'present',
+      totalHours: 0,
+      checkInTime: checkInEvent.timestamp,
+      checkOutTime: null,
+      createdAt: new Date(),
+    };
+    
+    const result = await db.collection('records').insertOne(newRecord);
+    const record = { ...newRecord, _id: result.insertedId };
 
     // Generate system alert if late
     if (isLate) {
-      await db.collection('messages').insertOne({
-        senderId: 'system',
-        receiverId: req.user._id.toString(),
-        type: 'alert',
-        subject: 'Late Check-in Alert',
-        content: `You checked in at ${checkInEvent.timestamp.toTimeString().slice(0, 5)}, which is after the scheduled start time of ${workStartTime}.`,
-        read: false,
-        createdAt: new Date(),
-      });
+      await sendSystemNotification(
+        db,
+        req.user._id.toString(),
+        'lateCheckIn',
+        'Late Check-in Alert',
+        `You checked in at ${checkInEvent.timestamp.toTimeString().slice(0, 5)}, which is after the scheduled start time of ${workStartTime}.`
+      );
     }
+
+    // Check for shift reminder: if user has no check-in yet and shift started
+    // This runs on check-in but won't send if already checked in (early return above)
 
     res.json({ success: true, data: record });
   } catch (error) {
@@ -241,7 +224,7 @@ router.post('/check-out', authenticate, async (req, res, next) => {
     const today = getLocalDateString();
 
     // Validate location
-    if (!location || !location.latitude || !location.longitude || !location.accuracy) {
+    if (!hasRequiredLocationFields(location)) {
       return res.status(400).json({ 
         success: false, 
         message: 'GPS location is required' 
@@ -300,8 +283,7 @@ router.post('/check-out', authenticate, async (req, res, next) => {
     }
 
     // Check if already checked out
-    const lastEvent = existingRecord.events[existingRecord.events.length - 1];
-    if (lastEvent && lastEvent.type === 'check-out') {
+    if (existingRecord.checkOutTime) {
       return res.status(400).json({ 
         success: false, 
         message: 'Already checked out today' 
@@ -363,6 +345,31 @@ router.post('/check-out', authenticate, async (req, res, next) => {
     const updatedRecord = await db.collection('records').findOne({ 
       _id: existingRecord._id 
     });
+
+    // Generate system alerts for check-out
+    const checkOutTime = checkOutEvent.timestamp.toTimeString().slice(0, 5);
+    
+    // Late check-out (after shift end time)
+    if (checkOutTime > workEndTime) {
+      await sendSystemNotification(
+        db,
+        req.user._id.toString(),
+        'lateCheckOut',
+        'Late Check-out Alert',
+        `You checked out at ${checkOutTime}, which is after your scheduled end time of ${workEndTime}.`
+      );
+    }
+
+    // Overtime (worked more than 8 hours)
+    if (totalHours > 8) {
+      await sendSystemNotification(
+        db,
+        req.user._id.toString(),
+        'overtime',
+        'Overtime Alert',
+        `You worked ${totalHours.toFixed(1)} hours today, which exceeds the standard 8-hour work day.`
+      );
+    }
 
     res.json({ success: true, data: updatedRecord });
   } catch (error) {

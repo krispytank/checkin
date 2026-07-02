@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { usersAPI, authAPI } from '../lib/api.js';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { usersAPI, authAPI, jobTitlesAPI, departmentsAPI } from '../lib/api.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { getInitials, cn } from '../lib/utils.js';
-import { User, Mail, Shield, Building, Briefcase, MapPin, Loader2, Save, Lock } from 'lucide-react';
+import { toast } from '../lib/useToast.js';
+import { User, Mail, Shield, Building, Briefcase, MapPin, Loader2, Save, Lock, Eye, EyeOff } from 'lucide-react';
+import SearchableSelect from '../components/SearchableSelect.jsx';
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -21,6 +23,30 @@ export default function ProfilePage() {
     confirmPassword: '',
   });
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+
+  const { data: jobTitlesData } = useQuery({
+    queryKey: ['jobTitles'],
+    queryFn: async () => {
+      const res = await jobTitlesAPI.list();
+      return res.data;
+    },
+  });
+
+  const { data: departmentsData } = useQuery({
+    queryKey: ['departments'],
+    queryFn: async () => {
+      const res = await departmentsAPI.list();
+      return res.data;
+    },
+  });
+
+  const jobTitleOptions = jobTitlesData?.data?.map(j => j.name) || [];
+  const departmentOptions = departmentsData?.data?.map(d => d.name) || [];
 
   // Update profile mutation
   const updateProfileMutation = useMutation({
@@ -28,6 +54,11 @@ export default function ProfilePage() {
     onSuccess: () => {
       queryClient.invalidateQueries(['auth', 'me']);
       setIsEditing(false);
+      toast.success('Profile Updated', 'Your profile has been saved successfully.');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || 'Failed to update profile. Please try again.';
+      toast.error('Update Failed', message);
     },
   });
 
@@ -38,6 +69,11 @@ export default function ProfilePage() {
     onSuccess: () => {
       setShowPasswordForm(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      toast.success('Password Changed', 'Your password has been updated successfully.');
+    },
+    onError: (error) => {
+      const message = error.response?.data?.message || 'Failed to change password. Please try again.';
+      toast.error('Password Change Failed', message);
     },
   });
 
@@ -49,7 +85,7 @@ export default function ProfilePage() {
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      alert("Passwords don't match");
+      toast.error('Password Mismatch', 'New password and confirmation do not match.');
       return;
     }
     changePasswordMutation.mutate({ 
@@ -139,22 +175,22 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Department</label>
-                  <input
-                    type="text"
+                  <SearchableSelect
+                    options={departmentOptions}
                     value={formData.department}
-                    onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                    onChange={(val) => setFormData(prev => ({ ...prev, department: val }))}
+                    placeholder="Select department"
                     disabled={!isEditing}
-                    className="w-full rounded-lg border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Job Title</label>
-                  <input
-                    type="text"
+                  <SearchableSelect
+                    options={jobTitleOptions}
                     value={formData.jobTitle}
-                    onChange={(e) => setFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
+                    onChange={(val) => setFormData(prev => ({ ...prev, jobTitle: val }))}
+                    placeholder="Select job title"
                     disabled={!isEditing}
-                    className="w-full rounded-lg border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -204,33 +240,60 @@ export default function ProfilePage() {
               <form onSubmit={handlePasswordSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Current Password</label>
-                  <input
-                    type="password"
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                    className="w-full rounded-lg border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPasswords.current ? 'text' : 'password'}
+                      value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                      className="w-full rounded-lg border bg-background px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPasswords.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">New Password</label>
-                  <input
-                    type="password"
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                    className="w-full rounded-lg border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPasswords.new ? 'text' : 'password'}
+                      value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                      className="w-full rounded-lg border bg-background px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Confirm New Password</label>
-                  <input
-                    type="password"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                    className="w-full rounded-lg border bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPasswords.confirm ? 'text' : 'password'}
+                      value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                      className="w-full rounded-lg border bg-background px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
                 <div className="flex gap-3">
                   <button

@@ -37,13 +37,17 @@ export default function DashboardPage() {
     },
   });
 
-  // Get user's station for map context
+  // Get user's station for map context - always fetch fresh data
   const { data: stationsData } = useQuery({
     queryKey: ['stations'],
     queryFn: async () => {
       const response = await stationsAPI.list();
       return response.data;
     },
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    staleTime: 30000,
+    refetchInterval: 60000,
   });
 
   // Check-in mutation
@@ -127,6 +131,7 @@ export default function DashboardPage() {
       setGpsError('');
       setGpsLocation(null);
       setShowCheckInModal(true);
+      queryClient.invalidateQueries(['stations']);
 
       const location = await acquireGPS();
       setGpsLocation(location);
@@ -140,6 +145,7 @@ export default function DashboardPage() {
       setGpsError('');
       setGpsLocation(null);
       setShowCheckOutModal(true);
+      queryClient.invalidateQueries(['stations']);
 
       const location = await acquireGPS();
       setGpsLocation(location);

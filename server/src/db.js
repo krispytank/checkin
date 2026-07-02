@@ -82,6 +82,9 @@ async function createIndexes(database) {
     await database.collection('password_resets').createIndex({ token: 1 });
     await database.collection('password_resets').createIndex({ expires: 1 }, { expireAfterSeconds: 0 });
 
+    // Notification preferences indexes
+    await database.collection('notification_preferences').createIndex({ userId: 1 }, { unique: true });
+
     console.log('Database indexes created successfully');
   } catch (error) {
     // Log warning but don't crash - indexes may already exist

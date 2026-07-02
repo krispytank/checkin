@@ -93,6 +93,109 @@ router.get('/:id', authenticate, async (req, res, next) => {
   }
 });
 
+// POST /api/users/bulk
+router.post('/bulk', authenticate, authorize('admin'), async (req, res, next) => {
+  try {
+    const { users } = req.body;
+
+    if (!Array.isArray(users) || users.length === 0) {
+      return res.status(400).json({ success: false, message: 'Please provide an array of users' });
+    }
+
+    if (users.length > 500) {
+      return res.status(400).json({ success: false, message: 'Maximum 500 users per upload' });
+    }
+
+    const db = getDB();
+    const results = { created: 0, failed: 0, errors: [] };
+
+    for (let i = 0; i < users.length; i++) {
+      const row = users[i];
+      const rowNum = i + 1;
+
+      try {
+        const { employeeId, name, email, password, role, department, jobTitle, stationId } = row;
+
+        // Validate required fields
+        if (!employeeId || !employeeId.trim()) {
+          results.errors.push({ row: rowNum, email: email || 'N/A', message: 'Employee ID is required' });
+          results.failed++;
+          continue;
+        }
+        if (!name || !name.trim()) {
+          results.errors.push({ row: rowNum, email: email || 'N/A', message: 'Name is required' });
+          results.failed++;
+          continue;
+        }
+        if (!email || !email.trim()) {
+          results.errors.push({ row: rowNum, employeeId, message: 'Email is required' });
+          results.failed++;
+          continue;
+        }
+        if (!validateEmail(email)) {
+          results.errors.push({ row: rowNum, email, message: 'Invalid email format' });
+          results.failed++;
+          continue;
+        }
+        if (!password || password.length < 8) {
+          results.errors.push({ row: rowNum, email, message: 'Password must be at least 8 characters' });
+          results.failed++;
+          continue;
+        }
+        if (role && !validateRole(role)) {
+          results.errors.push({ row: rowNum, email, message: 'Invalid role' });
+          results.failed++;
+          continue;
+        }
+
+        // Check duplicate employee ID
+        const existingEmp = await db.collection('users').findOne({ employeeId: employeeId.trim() });
+        if (existingEmp) {
+          results.errors.push({ row: rowNum, email, message: `Employee ID "${employeeId}" already exists` });
+          results.failed++;
+          continue;
+        }
+
+        // Check duplicate email
+        const existingEmail = await db.collection('users').findOne({ email: email.toLowerCase().trim() });
+        if (existingEmail) {
+          results.errors.push({ row: rowNum, email, message: `Email "${email}" already exists` });
+          results.failed++;
+          continue;
+        }
+
+        // Hash password
+        const hashedPassword = await bcrypt.hash(password, 12);
+
+        // Create user
+        await db.collection('users').insertOne({
+          employeeId: employeeId.trim(),
+          name: name.trim(),
+          email: email.toLowerCase().trim(),
+          password: hashedPassword,
+          role: role || 'user',
+          department: department || null,
+          jobTitle: jobTitle || null,
+          stationId: stationId || null,
+          supervisorId: null,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        results.created++;
+      } catch (err) {
+        results.errors.push({ row: rowNum, message: err.message });
+        results.failed++;
+      }
+    }
+
+    res.status(201).json({ success: true, data: results });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /api/users
 router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
   try {

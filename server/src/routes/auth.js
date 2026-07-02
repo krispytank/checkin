@@ -4,6 +4,7 @@ import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
 import { generateToken, authenticate } from '../middleware/auth.js';
 import { validateEmail, validatePassword, validateRequired } from '../middleware/validation.js';
+import { sendSystemNotification } from './notifications.js';
 
 const router = Router();
 
@@ -62,6 +63,39 @@ router.post('/login', async (req, res, next) => {
         token,
       },
     });
+
+    // Send shift reminder if applicable (non-blocking)
+    try {
+      const now = new Date();
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const currentTime = now.toTimeString().slice(0, 5);
+
+      // Check if user has a shift today
+      const dayOfWeek = now.getDay();
+      const shiftAssignment = await db.collection('shift_assignments').findOne({ userId: user._id.toString() });
+      if (shiftAssignment) {
+        const shift = await db.collection('shifts').findOne({ _id: new ObjectId(shiftAssignment.shiftId) });
+        if (shift && shift.applicableDays.includes(dayOfWeek)) {
+          // Check if user hasn't checked in yet
+          const todayRecord = await db.collection('records').findOne({
+            userId: user._id.toString(),
+            date: today,
+          });
+          if (!todayRecord && currentTime <= shift.startTime) {
+            await sendSystemNotification(
+              db,
+              user._id.toString(),
+              'shiftReminder',
+              'Shift Reminder',
+              `Your shift starts at ${shift.startTime}. Please remember to check in on time.`
+            );
+          }
+        }
+      }
+    } catch (e) {
+      // Non-blocking - don't fail login if reminder fails
+      console.error('Shift reminder error:', e.message);
+    }
   } catch (error) {
     next(error);
   }

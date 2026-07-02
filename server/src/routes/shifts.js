@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
 import { authenticate, authorize } from '../middleware/auth.js';
 import { validateRequired, validateShiftTime, validateDaysOfWeek } from '../middleware/validation.js';
+import { sendSystemNotification } from './notifications.js';
 
 const router = Router();
 
@@ -207,6 +208,21 @@ router.put('/:id', authenticate, authorize('admin', 'supervisor'), async (req, r
       _id: new ObjectId(id) 
     });
 
+    // Notify all assigned users about shift change
+    const assignments = await db.collection('shift_assignments')
+      .find({ shiftId: id })
+      .toArray();
+
+    for (const assignment of assignments) {
+      await sendSystemNotification(
+        db,
+        assignment.userId,
+        'shiftChange',
+        'Shift Updated',
+        `Your shift "${shift.name}" has been updated. New times: ${updatedShift.startTime} - ${updatedShift.endTime}.`
+      );
+    }
+
     res.json({ success: true, data: updatedShift });
   } catch (error) {
     next(error);
@@ -300,6 +316,15 @@ router.post('/assign', authenticate, authorize('admin', 'supervisor'), async (re
         { userId },
         { $set: { shiftId, updatedAt: new Date() } }
       );
+
+      // Notify user of shift change
+      await sendSystemNotification(
+        db,
+        userId,
+        'shiftAssignment',
+        'Shift Assignment Changed',
+        `Your shift has been changed to "${shift.name}" (${shift.startTime} - ${shift.endTime}).`
+      );
     } else {
       // Create new assignment
       await db.collection('shift_assignments').insertOne({
@@ -307,6 +332,15 @@ router.post('/assign', authenticate, authorize('admin', 'supervisor'), async (re
         shiftId,
         createdAt: new Date(),
       });
+
+      // Notify user of new shift assignment
+      await sendSystemNotification(
+        db,
+        userId,
+        'shiftAssignment',
+        'New Shift Assignment',
+        `You have been assigned to the "${shift.name}" shift (${shift.startTime} - ${shift.endTime}).`
+      );
     }
 
     res.json({ 
