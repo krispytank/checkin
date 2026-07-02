@@ -113,6 +113,7 @@ async function seedDefaultAdmin(database) {
         department: 'Administration',
         jobTitle: 'System Administrator',
         isActive: true,
+        tokenVersion: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
       });

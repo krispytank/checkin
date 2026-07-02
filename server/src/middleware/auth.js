@@ -2,7 +2,11 @@ import jwt from 'jsonwebtoken';
 import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+if (!process.env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable is required');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -18,6 +22,13 @@ export const authenticate = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     
     const decoded = jwt.verify(token, JWT_SECRET);
+
+    if (decoded.type !== 'auth') {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Invalid token type.' 
+      });
+    }
     
     const db = getDB();
     const user = await db.collection('users').findOne(
@@ -29,6 +40,13 @@ export const authenticate = async (req, res, next) => {
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid token or user deactivated.' 
+      });
+    }
+
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== (user.tokenVersion || 0)) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Token has been revoked.' 
       });
     }
 
@@ -71,11 +89,11 @@ export const authorize = (...roles) => {
   };
 };
 
-export const generateToken = (userId, role) => {
+export const generateToken = (userId, role, type = 'auth', tokenVersion = 0) => {
   return jwt.sign(
-    { userId, role },
+    { userId, role, type, tokenVersion },
     JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
   );
 };
 

@@ -4,6 +4,7 @@ import { ThemeProvider } from './contexts/ThemeContext.jsx';
 import { ConfigProvider } from './contexts/ConfigContext.jsx';
 import AppRouter from './router/AppRouter.jsx';
 import Toaster from './components/Toaster.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,16 +17,18 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ConfigProvider>
-        <ThemeProvider>
-          <AuthProvider>
-            <AppRouter />
-            <Toaster />
-          </AuthProvider>
-        </ThemeProvider>
-      </ConfigProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ConfigProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              <AppRouter />
+              <Toaster />
+            </AuthProvider>
+          </ThemeProvider>
+        </ConfigProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

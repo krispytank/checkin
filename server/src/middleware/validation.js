@@ -6,7 +6,12 @@ export const validateEmail = (email) => {
 };
 
 export const validatePassword = (password) => {
-  return password && password.length >= config.validation.minPasswordLength;
+  if (!password || password.length < config.validation.minPasswordLength) return false;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasLowerCase = /[a-z]/.test(password);
+  const hasDigit = /[0-9]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  return hasUpperCase && hasLowerCase && hasDigit && hasSpecial;
 };
 
 export const validateEmployeeId = (employeeId) => {
@@ -64,6 +69,10 @@ export const validateDaysOfWeek = (days) => {
 export const sanitizeString = (str) => {
   if (typeof str !== 'string') return str;
   return str.trim().replace(/\s+/g, ' ');
+};
+
+export const escapeRegex = (str) => {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 };
 
 export const validatePagination = (page, limit) => {

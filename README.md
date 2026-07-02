@@ -1,276 +1,909 @@
-# AttendTrack — GPS-Verified Time & Attendance
+# AttendTrack
 
-A full-stack time and attendance system for court/institutional workers with GPS geo-fencing, shift management, internal messaging, and role-based access control.
+> GPS-Verified Time & Attendance System
+> Version: 1.0.0
 
-## Features
+A full-stack time and attendance system with GPS geo-fencing, shift management, internal messaging, role-based access control, and pull-based deployment from GitHub.
 
-### Core Attendance
-- **GPS-verified check-in/out** — device location validated against a geo-fence before recording attendance
-- **Haversine distance calculation** — verifies the employee is within the station boundary
-- **GPS accuracy gating** — rejects check-ins with accuracy worse than 50m
-- **Live duration timer** — real-time HH:MM:SS counter showing hours worked
-- **Automatic status** — determines present, absent, late, half-day, or overtime based on 8:00 AM – 5:00 PM standard hours
-- **Shift timing analysis** — calculates lateness, early checkout, overtime, and hours remaining
+---
 
-### Geo-Fencing
-- **CourtStation model** — each station has a name, coordinates, and radius in meters
-- **Dual validation** — both distance (within station radius) AND GPS accuracy (within 50m) must pass
-- **Reverse geocoding** — converts coordinates to human-readable addresses via Nominatim
-- **Location picker** — preview and confirm GPS location before check-in
+## Table of Contents
 
-### Shifts Management
-- Create, edit, and delete shift templates (name, start/end times, applicable days)
-- Assign shifts to team members (one shift per user enforced)
-- Late check-in detection with automatic system alerts
+- [Overview](#overview)
+- [Tech Stack](#tech-stack)
+- [Architecture](#architecture)
+- [Features](#features)
+- [Security Measures](#security-measures)
+- [API Reference](#api-reference)
+- [Database Schema](#database-schema)
+- [Environment Variables](#environment-variables)
+- [Getting Started](#getting-started)
+- [Versioning & Releases](#versioning--releases)
+- [Deployment](#deployment)
+- [Remote Updates](#remote-updates)
+- [Changelog](#changelog)
+- [License](#license)
 
-### Internal Messaging
-- Inbox and sent folders with message types: alert, message, notification
-- System alerts auto-generated for late check-ins, missed check-ins, and missed check-outs
-- Unread count badge with mark-as-read functionality
-- Compose messages from admin/supervisor to any user
+---
 
-### Notifications
-- Browser push notifications for missed check-in/out reminders
-- 30-second polling timer that triggers alerts
-- Email notifications (console-logged in development)
+## Overview
 
-### Reports & Analytics
-- Bar charts — attendance by day
-- Pie charts — attendance status distribution
-- Line charts — hours worked over time
-- Weekly summary stats (present, absent, late days, total hours, average check-in)
-- Date range and employee filtering
-- Map view showing check-in/out GPS pins
+AttendTrack is a GPS-verified time and attendance management system. Employees check in/out via their device GPS, which is validated against configurable geo-fence stations. Supervisors monitor team attendance in real-time, and admins manage the full system including users, stations, shifts, departments, and job titles.
 
-### Admin Panel
-- **User Management** — create single/bulk users, edit roles, departments, and station assignments
-- **Court Stations** — CRUD for geo-fence stations with coordinates and radius
-- **Job Titles & Departments** — admin-managed lists with custom entries
-- **Settings** — system configuration
+**Key Capabilities:**
+- GPS-validated check-in/out with geo-fence enforcement
+- Role-based access control (Admin, Supervisor, User)
+- Shift scheduling and assignment
+- Real-time attendance dashboard with duration timer
+- Internal messaging system with notification preferences
+- Reports and analytics with charts
+- Dark/light theme support
+- Mobile-responsive design
 
-### Role-Based Access Control
-| Role | Capabilities |
-|------|-------------|
-| **Admin** | Full access — user management, stations, shifts, reports, settings |
-| **Supervisor** | Team attendance, shift management, messaging to assigned team |
-| **User** | Check in/out, view own history and reports, profile management |
+---
 
 ## Tech Stack
 
-### Frontend
-- **React 18** with JavaScript (JSX)
-- **Vite 5** build tool
-- **wouter** for client-side routing
-- **Tailwind CSS v3** + **shadcn/ui** (Radix-based components)
-- **Leaflet** + **react-leaflet** for OpenStreetMap integration
-- **Recharts** for analytics charts
-- **react-hook-form** + **zod** for form validation
-- **Framer Motion** for animations
-- **@tanstack/react-query** for data fetching
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite, Tailwind CSS, Radix UI (shadcn/ui) |
+| Routing | wouter |
+| State / Data Fetching | TanStack React Query v5, React Context |
+| Forms | react-hook-form + Zod validation |
+| Charts | Recharts |
+| Maps | Leaflet + OpenStreetMap |
+| Icons | Lucide React |
+| Backend | Express.js 4 (Node.js, ES Modules) |
+| Database | MongoDB (native driver v6) |
+| Auth | JWT (jsonwebtoken) + bcryptjs |
+| Security | Helmet, express-mongo-sanitize, express-rate-limit, CORS |
+| Process Manager | pm2 (production), nodemon (development) |
+| CI/CD | GitHub Actions |
+| Deployment | Pull-based via deploy.sh, pm2, GitHub Releases |
 
-### Backend
-- **Express** (Node.js)
-- **MongoDB** (via official driver)
-- **bcryptjs** for password hashing
-- **jsonwebtoken** for JWT authentication
-- Custom API with role-based middleware
+---
 
-### Architecture
-- **Monorepo layout**: `client/` (SPA), `server/` (Express API), `shared/` (constants)
-- **Hybrid storage**: MongoDB for all data, localStorage for auth token
-- **Geo-fencing**: Haversine formula for distance, no external map API dependencies for validation
+## Architecture
+
+```
+attendance/
+├── .github/
+│   └── workflows/
+│       └── release.yml         # CI/CD: test → build → release
+├── client/                     # React frontend (Vite)
+│   ├── public/
+│   │   ├── favicon.svg         # App favicon
+│   │   ├── robots.txt          # SEO directives
+│   │   └── leaflet.css         # Bundled Leaflet CSS (no CDN dependency)
+│   ├── src/
+│   │   ├── components/         # Reusable UI components
+│   │   │   └── ErrorBoundary.jsx  # Top-level error handler
+│   │   ├── contexts/           # Auth, Theme, Config providers
+│   │   ├── hooks/              # Custom React hooks
+│   │   ├── lib/                # Axios API client, utilities
+│   │   ├── pages/              # Route-level page components
+│   │   └── utils/              # Helper functions
+│   ├── .eslintrc.json          # Client ESLint config
+│   └── vite.config.js          # Dev server (port 5173) + API proxy
+├── server/                     # Express backend
+│   ├── src/
+│   │   ├── config.js           # App constants
+│   │   ├── db.js               # MongoDB connection + seeding
+│   │   ├── index.js            # Express app setup + static serving
+│   │   ├── middleware/          # Auth, validation
+│   │   ├── routes/             # API route handlers
+│   │   └── utils/
+│   │       ├── geo.js          # Haversine distance calculation
+│   │       └── mail.js         # Email sending (nodemailer)
+│   ├── .eslintrc.json          # Server ESLint config
+│   └── .env                    # Environment variables (not tracked)
+├── CHANGELOG.md                # Version history
+├── deploy.sh                   # Production deploy script
+├── ecosystem.config.js         # pm2 config (configurable via APP_DIR)
+├── VERSION                     # Single source of truth for version
+├── package.json                # Root workspace config + version scripts
+├── Procfile                    # Deployment entry point (pm2-runtime)
+├── .env.example                # Environment variable template
+└── README.md                   # This file
+```
+
+### Client-Server Communication
+
+- **Development:** Vite dev server (port 5173) proxies `/api/*` requests to Express (port 3000). Same-origin from the browser's perspective — no CORS issues.
+- **Production:** Express serves the built React client from `client/dist/` as static files. API routes handled by Express. SPA fallback serves `index.html` for all non-API routes.
+- **API Client:** Centralized Axios instance (`client/src/lib/api.js`) with request interceptor (auto-attaches JWT) and response interceptor (auto-logout on 401).
+
+---
+
+## Features
+
+### Authentication & Session Management
+
+| Feature | Description |
+|---------|-------------|
+| Email/Password Login | Credentials validated against bcrypt-hashed passwords |
+| JWT Tokens | Signed with `JWT_SECRET`, 1-hour expiry, type-prefixed (`auth` vs `reset`) |
+| Token Versioning | `tokenVersion` field on users; incremented on password/role change to revoke old tokens |
+| Password Reset | Secure token-based flow with 1-hour expiry; prevents email enumeration |
+| Password Complexity | Min 8 chars, requires uppercase, lowercase, digit, and special character |
+| Auto-Logout | Client detects 401 responses, clears token, redirects to `/login` |
+
+### Role-Based Access Control (RBAC)
+
+| Role | Permissions |
+|------|-------------|
+| **Admin** | Full access: manage users, stations, shifts, departments, job titles. Change roles, activate/deactivate users. |
+| **Supervisor** | View team attendance, create/edit shifts, message team members. Scoped to assigned team only. |
+| **User** | Check in/out, view own attendance, view own profile, send messages. |
+
+### GPS & Geo-Fencing
+
+| Feature | Description |
+|---------|-------------|
+| GPS Acquisition | Uses `navigator.geolocation` with high accuracy, 15s timeout |
+| Dual Validation | Check-in/out requires: (1) distance <= station radius, AND (2) GPS accuracy <= 50m |
+| Haversine Distance | Calculates distance between user GPS and station center |
+| Configurable Radius | Each station has `radiusMeters` (min 10m, max 1000m) |
+| Location Preview | Map preview before confirming check-in/out |
+| Attendance Map | Leaflet map showing check-in (green) and check-out (brown) markers |
+| Location Picker | Interactive map for admins to place stations with search and "Use Current Location" |
+
+### Attendance Tracking
+
+| Feature | Description |
+|---------|-------------|
+| Check-In | Requires GPS within geo-fence; creates attendance record |
+| Check-Out | Requires GPS within geo-fence; calculates total hours |
+| One Record Per Day | Server enforces single check-in and single check-out per user per day |
+| Event Log | Each record stores timestamped events with full GPS data |
+| Automatic Status | Calculated at check-out: present, absent, late, half-day (<4hrs), overtime (>8hrs) |
+| Shift-Aware | Lateness determined against assigned shift start time |
+| Duration Timer | Real-time HH:MM:SS counter on dashboard while checked in |
+| Weekly Summary | Dashboard card showing weekly attendance breakdown |
+
+### Shift Management
+
+| Feature | Description |
+|---------|-------------|
+| Shift Templates | Create shifts with name, start/end time, applicable days (Sun-Sat) |
+| Shift Assignment | Assign shifts to users; one shift per user enforced |
+| Assignment Count | View how many users are assigned to each shift |
+| Duplicate Prevention | Cannot create duplicate shift names or delete shifts with assignments |
+| Day-of-Week Config | Toggle individual days for each shift |
+
+### Messaging & Notifications
+
+**Internal Messaging:**
+- Compose messages to users (supervisors restricted to team)
+- Three types: message, alert, notification
+- Inbox/Sent folders with unread count badge
+- Mark as read (individual and bulk)
+- Delete messages (sender or receiver)
+
+**Notification Preferences:**
+- Toggle 6 notification types: late check-in/out alerts, overtime, shift reminder, shift change/assignment
+- Mute all notifications (1 hour to 1 week)
+
+**System-Generated Alerts:**
+- Late check-in/out detection
+- Overtime detection (>8 hours)
+- Shift reminders (sent on login)
+- Shift change/assignment notifications
+
+### Reports & Analytics
+
+- Date range filtering (default: last 7 days)
+- Employee filtering
+- Charts: attendance status pie chart, daily hours bar chart, employee hours comparison
+- Summary statistics: total records, total hours, average hours, attendance rate
+- Recent records table with date, employee, times, hours, status
+
+### User Management (Admin)
+
+- Full CRUD for users
+- Bulk CSV import (up to 500 users) with validation and row-level error reporting
+- CSV template download
+- Search by name, employee ID, or email; filter by role
+- Duplicate detection (employee ID and email)
+
+### Station Management (Admin)
+
+- CRUD for geo-fence stations
+- Fields: name, latitude, longitude, radiusMeters
+- Interactive map picker with address search (Nominatim geocoding)
+- "Use Current Location" button
+- Mini-map preview on station cards
+
+### Department & Job Title Management (Admin)
+
+- CRUD for departments and job titles
+- Uniqueness enforcement; cannot delete items assigned to users
+
+### Profile Management
+
+- View profile with initials avatar, name, email, role badge
+- Edit name, email, department, job title
+- Change password with current/new/confirm fields
+
+### UI/UX
+
+- Dark/light theme with localStorage persistence and system preference detection
+- Responsive design with mobile sidebar
+- Toast notifications (success/error/warning)
+- Form validation (Zod schemas)
+- Custom SearchableSelect component
+- Framer Motion animations
+- Kente/Ghanaian brand colors (Green #009A44, Gold #8A704C)
+- Custom 404 page
+
+---
+
+## Security Measures
+
+### Authentication Security
+
+| Measure | Implementation |
+|---------|---------------|
+| Password Hashing | bcrypt with 12 salt rounds |
+| JWT Secret | Required at startup; 64-char hex random value; no fallback |
+| Token Expiry | 1-hour default (configurable via `JWT_EXPIRES_IN`) |
+| Token Type Claim | `type: 'auth'` for login tokens, `type: 'reset'` for password reset tokens |
+| Token Versioning | `tokenVersion` on user documents; incremented on password/role change; verified on each request |
+| Password Reset | Separate token type with 1-hour expiry; single-use (deleted after use) |
+| Email Enumeration Prevention | Forgot-password always returns success regardless of email existence |
+
+### Authorization Security
+
+| Measure | Implementation |
+|---------|---------------|
+| RBAC Middleware | `authorize('admin')` blocks non-admin API calls |
+| Route Protection | `ProtectedRoute` component checks auth + roles before rendering |
+| Self-Update Restriction | Non-admins can only update their own profile |
+| Supervisor Scoping | Supervisors can only see/manage their assigned team |
+| Soft Delete | Users deactivated (`isActive: false`) rather than removed |
+
+### Input Validation & Injection Prevention
+
+| Measure | Implementation |
+|---------|---------------|
+| NoSQL Injection Protection | `express-mongo-sanitize` strips `$`-prefixed keys from request bodies |
+| Regex Injection Prevention | `escapeRegex()` utility escapes special characters in search terms |
+| Email Validation | Server-side regex validation |
+| Password Complexity | Min 8 chars + uppercase + lowercase + digit + special character |
+| Role Validation | Whitelist check against `['admin', 'supervisor', 'user']` |
+| Geo Location Validation | Latitude (-90 to 90), Longitude (-180 to 180), finite number checks |
+| Body Size Limit | 50KB JSON body limit via `express.json({ limit: '50kb' })` |
+
+### Rate Limiting
+
+| Measure | Configuration |
+|---------|--------------|
+| General Rate Limit | 100 requests per 15 minutes per IP |
+| Auth Rate Limit | 5 requests per 15 minutes per IP on `/login`, `/forgot-password`, `/reset-password` |
+
+### HTTP Security
+
+| Measure | Implementation |
+|---------|---------------|
+| Helmet.js | HSTS, X-Frame-Options: DENY, X-Content-Type-Options: nosniff, CSP, COOP, CORP, Referrer-Policy |
+| CORS | Configurable origin; production requires `CLIENT_URL` env var |
+| Morgan Logging | `combined` format in production, `dev` in development |
+
+### Secret Management
+
+- All secrets in `.env` file (gitignored)
+- Server fails to start if `JWT_SECRET` is missing
+- Server fails to start if `CLIENT_URL` is missing in production
+- No hardcoded secrets anywhere in source code
+
+### Error Handling
+
+- Production: Only `'Something went wrong!'` returned (no stack traces)
+- Development: `err.message` included for debugging
+- MongoDB errors return generic `'Invalid ID'` messages
+- All user queries exclude password field
+
+### Database Security
+
+- Parameterized queries via MongoDB native driver (no string interpolation)
+- Unique indexes on employeeId, email
+- TTL index on `password_resets.expires` auto-deletes expired tokens
+
+---
+
+## API Reference
+
+### Auth Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/login` | No | Login with email/password |
+| POST | `/api/auth/register` | Admin | Create new user |
+| GET | `/api/auth/me` | Yes | Get current user profile |
+| POST | `/api/auth/change-password` | Yes | Change password |
+| POST | `/api/auth/forgot-password` | No | Request password reset |
+| POST | `/api/auth/reset-password` | No | Reset password with token |
+
+### User Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/users` | Yes | List users (with search, filter, pagination) |
+| GET | `/api/users/:id` | Yes | Get user by ID |
+| POST | `/api/users` | Admin | Create user |
+| POST | `/api/users/bulk` | Admin | Bulk import users (up to 500) |
+| PUT | `/api/users/:id` | Yes* | Update user (*admins can update any; others only self) |
+| DELETE | `/api/users/:id` | Admin | Soft-delete user |
+
+### Record Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/records` | Yes | List attendance records |
+| GET | `/api/records/today` | Yes | Get today's record for current user |
+| POST | `/api/records/check-in` | Yes | Check in with GPS location |
+| POST | `/api/records/check-out` | Yes | Check out with GPS location |
+| GET | `/api/records/weekly-summary` | Yes | Get weekly attendance summary |
+
+### Station Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/stations` | Yes | List all stations |
+| GET | `/api/stations/:id` | Yes | Get station by ID |
+| POST | `/api/stations` | Admin | Create station |
+| PUT | `/api/stations/:id` | Admin | Update station |
+| DELETE | `/api/stations/:id` | Admin | Delete station |
+
+### Shift Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/shifts` | Yes | List shifts (with assignment counts) |
+| GET | `/api/shifts/:id` | Yes | Get shift with assigned users |
+| POST | `/api/shifts` | Admin/Supervisor | Create shift |
+| PUT | `/api/shifts/:id` | Admin/Supervisor | Update shift |
+| DELETE | `/api/shifts/:id` | Admin | Delete shift |
+| POST | `/api/shifts/assign` | Admin/Supervisor | Assign shift to user |
+| DELETE | `/api/shifts/assign/:userId` | Admin/Supervisor | Unassign shift from user |
+
+### Message Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/messages` | Yes | List messages (inbox/sent, paginated) |
+| GET | `/api/messages/:id` | Yes | Get message (sender/receiver only) |
+| POST | `/api/messages` | Yes | Send message |
+| PUT | `/api/messages/read-all` | Yes | Mark all as read |
+| PUT | `/api/messages/:id/read` | Yes | Mark one as read |
+| DELETE | `/api/messages/:id` | Yes | Delete message (sender/receiver only) |
+
+### Other Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/job-titles` | Yes | List job titles |
+| POST | `/api/job-titles` | Admin | Create job title |
+| PUT | `/api/job-titles/:id` | Admin | Update job title |
+| DELETE | `/api/job-titles/:id` | Admin | Delete job title |
+| GET | `/api/departments` | Yes | List departments |
+| POST | `/api/departments` | Admin | Create department |
+| PUT | `/api/departments/:id` | Admin | Update department |
+| DELETE | `/api/departments/:id` | Admin | Delete department |
+| GET | `/api/notifications/preferences` | Yes | Get notification preferences |
+| PUT | `/api/notifications/preferences` | Yes | Update notification preferences |
+| GET | `/api/notifications/unread-count` | Yes | Get unread message count |
+| GET | `/api/config` | No | Get public app configuration |
+| GET | `/api/health` | No | Health check |
+| GET | `/api/version` | No | Get app version |
+
+**Total: 48 API endpoints**
+
+---
+
+## Database Schema
+
+### `users`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| employeeId | String | Unique employee identifier |
+| name | String | Full name |
+| email | String | Unique email address |
+| password | String | bcrypt-hashed password |
+| role | String | `admin`, `supervisor`, or `user` |
+| department | String | Department name |
+| jobTitle | String | Job title |
+| stationId | String | Assigned station ID |
+| supervisorId | String | Assigned supervisor's user ID |
+| isActive | Boolean | Account active flag |
+| tokenVersion | Number | Incremented to revoke tokens |
+| createdAt | Date | Creation timestamp |
+| updatedAt | Date | Last update timestamp |
+
+**Indexes:** employeeId (unique), email (unique), role, stationId, supervisorId
+
+### `records`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| userId | String | User ID |
+| date | String | `YYYY-MM-DD` |
+| status | String | `present`, `absent`, `late`, `half-day`, `overtime` |
+| events | Array | Timestamped check-in/out events with GPS data |
+| totalHours | Number | Total hours worked |
+| createdAt | Date | Creation timestamp |
+
+**Indexes:** userId+date (unique), date, status
+
+### `stations`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| name | String | Station name |
+| latitude | Number | Station center latitude |
+| longitude | Number | Station center longitude |
+| radiusMeters | Number | Geo-fence radius (10-1000) |
+| createdAt | Date | Creation timestamp |
+
+**Indexes:** latitude+longitude
+
+### `shifts`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| name | String | Unique shift name |
+| startTime | String | `HH:MM` format |
+| endTime | String | `HH:MM` format |
+| applicableDays | Array | Day indices (0=Sun through 6=Sat) |
+| createdAt | Date | Creation timestamp |
+
+**Indexes:** name (unique)
+
+### `shift_assignments`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| userId | String | User ID (unique) |
+| shiftId | String | Shift ID |
+| createdAt | Date | Creation timestamp |
+
+**Indexes:** userId (unique), shiftId
+
+### `messages`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| senderId | String | Sender user ID (or `'system'`) |
+| receiverId | String | Receiver user ID |
+| type | String | `message`, `alert`, or `notification` |
+| subject | String | Message subject |
+| content | String | Message body |
+| read | Boolean | Read status |
+| createdAt | Date | Creation timestamp |
+
+**Indexes:** receiverId+read, senderId, createdAt
+
+### `departments`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| name | String | Department name |
+| createdAt | Date | Creation timestamp |
+
+### `job_titles`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| name | String | Job title name |
+| createdAt | Date | Creation timestamp |
+
+### `password_resets`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| userId | String | User ID |
+| token | String | Reset token |
+| expires | Date | Expiration time |
+| createdAt | Date | Creation timestamp |
+
+**Indexes:** token, expires (TTL — auto-deletes expired entries)
+
+### `notification_preferences`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| userId | String | User ID (unique) |
+| lateCheckIn | Boolean | Enable late check-in alerts |
+| lateCheckOut | Boolean | Enable late check-out alerts |
+| overtime | Boolean | Enable overtime alerts |
+| shiftReminder | Boolean | Enable shift reminders |
+| shiftChange | Boolean | Enable shift change notifications |
+| shiftAssignment | Boolean | Enable shift assignment notifications |
+| mutedUntil | Date | Temporary mute expiry |
+
+**Indexes:** userId (unique)
+
+---
+
+## Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `MONGODB_URI` | Yes | `mongodb://localhost:27017` | MongoDB connection string |
+| `MONGODB_DB` | No | `attendtrack` | Database name |
+| `JWT_SECRET` | Yes | — | Secret key for JWT signing (64-char hex recommended) |
+| `JWT_EXPIRES_IN` | No | `1h` | Token expiry duration |
+| `PORT` | No | `3000` | Server port |
+| `NODE_ENV` | No | `development` | `development` or `production` |
+| `CLIENT_URL` | Production | — | Frontend URL for CORS (required in production) |
+| `DEFAULT_ADMIN_ID` | No | `001` | Default admin employee ID |
+| `DEFAULT_ADMIN_NAME` | No | `Alex Johnson` | Default admin name |
+| `DEFAULT_ADMIN_EMAIL` | No | `admin@example.com` | Default admin email |
+| `DEFAULT_ADMIN_PASSWORD` | No | — | Default admin password (strong, required on first run) |
+| `VITE_API_URL` | No | `/api` | API base URL (client-side) |
+| `SMTP_HOST` | No | `smtp.gmail.com` | Email SMTP host |
+| `SMTP_PORT` | No | `587` | Email SMTP port |
+| `SMTP_USER` | No | — | Email SMTP username |
+| `SMTP_PASS` | No | — | Email SMTP password |
+| `EMAIL_FROM` | No | `noreply@attendtrack.com` | Sender email address |
+
+---
 
 ## Getting Started
 
 ### Prerequisites
-- [Node.js](https://nodejs.org/) (v18 or higher)
-- [MongoDB](https://www.mongodb.com/) instance (local or remote)
+
+- Node.js 18+
+- MongoDB (local or Atlas)
 
 ### Installation
 
 ```bash
-git clone <repo-url> attendtrack
-cd attendtrack
+git clone https://github.com/krispytank/Attendance.git
+cd Attendance
 npm install
-```
-
-### Environment Setup
-
-Copy `.env.example` to `.env` and fill in the values:
-
-```bash
-cp .env.example .env
-```
-
-Required variables:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017` |
-| `MONGODB_DB` | Database name | `attendtrack` |
-| `PORT` | Server port | `3000` |
-| `JWT_SECRET` | JWT signing secret | (required) |
-| `DEFAULT_ADMIN_ID` | Seed admin employee ID | `001` |
-| `DEFAULT_ADMIN_NAME` | Seed admin display name | `Alex Johnson` |
-| `DEFAULT_ADMIN_EMAIL` | Seed admin email | `admin@example.com` |
-| `DEFAULT_ADMIN_PASSWORD` | Seed admin password | `changeme123` |
-
-### Running
-
-```bash
-# Development (Vite + API on port 3000)
+cp .env.example server/.env
+# Edit server/.env with your values
 npm run dev
-
-# Production build
-npm run build
-npm run start
-
-# Type check
-npm run check
-
-# Format code
-npm run format
 ```
 
-## Project Structure
+### How Frontend-Backend Communication Works
+
+**Development (two servers):**
+- Vite dev server runs on `:5173`, Express on `:3000`
+- Frontend Axios client uses `baseURL: '/api'` (relative)
+- Vite proxy forwards `/api/*` to Express — no CORS issues
+
+**Production (single server):**
+- Express serves the built React client from `client/dist/`
+- Express handles `/api/*` routes
+- Everything is same-origin — no proxy needed
+
+The frontend does not need its own `.env` file. It works via the Vite proxy in development and static serving in production.
+
+### Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start both client and server in development mode |
+| `npm run dev:server` | Start only the Express server |
+| `npm run dev:client` | Start only the Vite dev server |
+| `npm run build` | Build the client for production |
+| `npm start` | Start the server in production mode |
+| `npm run start:pm2` | Start server with pm2 |
+| `npm run stop:pm2` | Stop server with pm2 |
+| `npm run restart:pm2` | Restart server with pm2 |
+| `npm run deploy` | Run deploy script (check for updates + deploy) |
+| `npm run deploy:force` | Force deploy latest version |
+| `npm run deploy:status` | Show current version and server status |
+
+---
+
+## Versioning & Releases
+
+### Semantic Versioning
+
+The project follows [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`
+
+| Bump | When | Example |
+|------|------|---------|
+| **MAJOR** | Breaking changes (DB schema, API breaking changes) | 1.0.0 → 2.0.0 |
+| **MINOR** | New features (backward-compatible) | 1.0.0 → 1.1.0 |
+| **PATCH** | Bug fixes, security patches | 1.0.0 → 1.0.1 |
+
+### Version Sources
+
+- **`VERSION` file** — Plain text file (e.g., `1.0.0`)
+- **Git tags** — Prefixed with `v` (e.g., `v1.0.0`)
+- **`package.json`** — Root package version
+
+### How to Release
+
+```bash
+# Patch release (bug fixes)
+npm run release:patch
+
+# Minor release (new features)
+npm run release:minor
+
+# Major release (breaking changes)
+npm run release:major
+```
+
+These commands:
+1. Bump the version in `package.json`
+2. Commit the change
+3. Create a git tag (`v1.0.1`)
+4. Push to GitHub
+5. Trigger the GitHub Actions CI/CD pipeline
+
+### CI/CD Pipeline
+
+Triggered automatically when a version tag (`v*`) is pushed:
 
 ```
-attendtrack/
-├── client/
-│   └── src/
-│       ├── components/       # UI components
-│       │   └── ui/           # shadcn/ui components
-│       ├── contexts/         # AttendanceContext, AuthContext, ThemeContext
-│       ├── hooks/            # Custom React hooks
-│       ├── layouts/          # MainLayout
-│       ├── lib/              # Utilities (api.js, utils.js, constants.js)
-│       ├── pages/            # Dashboard, Reports, Admin, Team, Shifts, Messages, Profile
-│       │   └── admin/        # Admin-specific pages
-│       └── router/           # AppRouter
-├── server/
-│   ├── src/
-│   │   ├── index.js          # Express server entry
-│   │   ├── db.js             # MongoDB connection + default admin seeding
-│   │   ├── middleware/       # Auth, validation middleware
-│   │   ├── routes/           # All API routes
-│   │   └── utils/            # Utility functions (geo.js)
-├── shared/
-│   ├── constants.js          # Shared constants
-│   └── index.js              # Module exports
-└── package.json
+Push tag v1.1.0
+    ↓
+GitHub Actions
+    ├── Run tests (server + client)
+    ├── Build client (vite build)
+    ├── Create GitHub Release
+    │   ├── Release notes (auto-generated from commits)
+    │   └── Client build artifact (client-dist-v1.1.0.zip)
+    └── Update VERSION file on main
 ```
 
-## Data Model
+### Commit Convention
 
-### MongoDB Collections
-| Collection | Purpose |
-|-----------|---------|
-| `users` | Employee accounts with auth fields, roles, supervisor assignments |
-| `records` | Daily attendance records with events array |
-| `stations` | Court station geo-fence definitions (name, lat, lng, radius) |
-| `shifts` | Shift templates (name, times, days) |
-| `shift_assignments` | User-to-shift mappings |
-| `messages` | Internal messaging (inbox, sent, system alerts) |
-| `job_titles` | Admin-managed job title list |
-| `departments` | Admin-managed department list |
-| `password_resets` | Password reset tokens and OTPs |
+Use [Conventional Commits](https://www.conventionalcommits.org/) for auto-generated release notes:
 
-### Core Types
-- **AttendanceEvent** — single check-in or check-out with timestamp and GPS location
-- **AttendanceRecord** — one day's attendance (employee, events, status, total hours)
-- **CourtStation** — geo-fence definition (name, coordinates, radius)
-- **GeoLocation** — captured GPS position with accuracy and optional address
-- **GeoFenceResult** — validation result (allowed, distance, accuracy status)
+| Prefix | Purpose | Example |
+|--------|---------|---------|
+| `feat:` | New feature | `feat: add overtime alerts` |
+| `fix:` | Bug fix | `fix: correct GPS validation` |
+| `security:` | Security patch | `security: patch NoSQL injection` |
+| `chore:` | Maintenance | `chore: update dependencies` |
+| `docs:` | Documentation | `docs: update API reference` |
 
-## API Routes
-
-All routes are prefixed with `/api`:
-
-| Method | Route | Description |
-|--------|-------|-------------|
-| POST | `/api/auth/login` | Login (returns JWT token) |
-| GET | `/api/auth/me` | Validate current session |
-| POST | `/api/auth/forgot-password` | Request password reset |
-| POST | `/api/auth/reset-password` | Reset password with OTP |
-| GET | `/api/records` | Get attendance records |
-| GET | `/api/records/today` | Get today's record |
-| POST | `/api/records/check-in` | Check in (with GPS validation) |
-| POST | `/api/records/check-out` | Check out (with GPS validation) |
-| GET | `/api/records/summary/weekly` | Get weekly summary |
-| GET | `/api/users` | List users (filtered by role) |
-| POST | `/api/users` | Create user |
-| PUT | `/api/users/:id` | Update user |
-| DELETE | `/api/users/:id` | Delete user |
-| GET | `/api/stations` | List court stations |
-| POST | `/api/stations` | Create station |
-| PUT | `/api/stations/:id` | Update station |
-| DELETE | `/api/stations/:id` | Delete station |
-| GET | `/api/shifts` | List shifts |
-| POST | `/api/shifts` | Create shift |
-| PUT | `/api/shifts/:id` | Update shift |
-| DELETE | `/api/shifts/:id` | Delete shift |
-| POST | `/api/shifts/assign` | Assign shift to user |
-| GET | `/api/messages` | List messages |
-| POST | `/api/messages` | Send message |
-| PUT | `/api/messages/:id/read` | Mark as read |
-| DELETE | `/api/messages/:id` | Delete message |
-| GET | `/api/job-titles` | List job titles |
-| POST | `/api/job-titles` | Create job title |
-| PUT | `/api/job-titles/:id` | Update job title |
-| DELETE | `/api/job-titles/:id` | Delete job title |
-| GET | `/api/departments` | List departments |
-| POST | `/api/departments` | Create department |
-| PUT | `/api/departments/:id` | Update department |
-| DELETE | `/api/departments/:id` | Delete department |
-
-## How It Works
-
-### Check-In Flow
-1. Employee clicks "Check In" on the dashboard
-2. GPS is acquired via `getCurrentPosition` (high accuracy, up to 15s timeout)
-3. Reverse geocoding converts coordinates to an address
-4. Geo-fence is validated (distance within station radius AND accuracy within 50m)
-5. If valid: attendance event is created and saved to MongoDB
-6. If late (past shift start): system alert message is auto-generated
-
-### Session Management
-- JWT-based authentication
-- Single session per user — new login invalidates any previous session
-- Session validated on every page load via `/api/auth/me`
-- Token stored in localStorage
-
-### Geo-Fence Validation
-```
-1. Calculate Haversine distance between GPS coordinates and station center
-2. Check if distance <= station.radiusMeters
-3. Check if GPS accuracy <= 50m (MAX_ACCURACY_METERS)
-4. Both conditions must pass for check-in/out to be accepted
-```
+---
 
 ## Deployment
 
-### MongoDB Atlas Setup
-1. Create a free account at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-2. Create a new cluster
-3. Create a database user with read/write access
-4. Whitelist your IP address (or allow access from anywhere for development)
-5. Get the connection string and add it to your environment variables
+### Production Architecture
 
-### Heroku/Railway Deployment
-1. Push your code to GitHub
-2. Connect your repository to Heroku/Railway
-3. Set environment variables in the dashboard
-4. Deploy!
+```
+GitHub Release (tagged)
+    ↓
+Production Server (/opt/attendtrack)
+    ├── deploy.sh          ← Checks GitHub for updates
+    ├── server/            ← Express API + static client serving
+    ├── client/dist/       ← Built React app
+    ├── server/.env        ← Production environment variables
+    ├── VERSION            ← Current deployed version
+    ├── ecosystem.config.js ← pm2 config
+    └── logs/              ← Deploy and server logs
+```
 
-### Environment Variables for Production
+### First-Time Server Setup
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/krispytank/Attendance.git /opt/attendtrack
+cd /opt/attendtrack
+
+# 2. Install dependencies
+npm install
+
+# 3. Configure environment
+cp .env.example server/.env
+# Edit server/.env with production values:
+#   - Strong JWT_SECRET (openssl rand -hex 32)
+#   - Strong DEFAULT_ADMIN_PASSWORD
+#   - MONGODB_URI with auth credentials
+#   - CLIENT_URL=https://your-domain.com
+#   - NODE_ENV=production
+
+# 4. Install pm2 globally
+npm install -g pm2
+
+# 5. Build client
+npm run build
+
+# 6. Start with pm2
+pm2 start ecosystem.config.js
+pm2 save
+pm2 startup  # Enables auto-start on server reboot
+
+# 7. Set up deploy script as cron (optional)
+crontab -e
+# Add: */5 * * * * /opt/attendtrack/deploy.sh >> /opt/attendtrack/logs/cron.log 2>&1
 ```
-MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/attendtrack
-JWT_SECRET=<your-strong-random-secret>
-NODE_ENV=production
-CLIENT_URL=<your-frontend-url>
+
+### Process Management (pm2)
+
+| Command | Description |
+|---------|-------------|
+| `pm2 list` | Show all running processes |
+| `pm2 logs attendtrack-server` | View server logs |
+| `pm2 restart attendtrack-server` | Restart the server |
+| `pm2 stop attendtrack-server` | Stop the server |
+| `pm2 monit` | Real-time monitoring dashboard |
+
+### Production Checklist
+
+- [ ] Set `NODE_ENV=production`
+- [ ] Set strong `JWT_SECRET` (64-char hex)
+- [ ] Set strong `DEFAULT_ADMIN_PASSWORD`
+- [ ] Set `CLIENT_URL` to your frontend domain
+- [ ] Configure `MONGODB_URI` with auth credentials
+- [ ] Configure SMTP for password reset emails
+- [ ] Enable MongoDB TLS
+- [ ] Set up SSL/TLS termination (reverse proxy or load balancer)
+- [ ] Install pm2 and enable startup (`pm2 startup`)
+- [ ] Configure deploy script cron (optional)
+- [ ] Set up GitHub deploy token for automated pulls
+
+---
+
+## Remote Updates
+
+### How It Works
+
+The production server pulls updates from GitHub using the `deploy.sh` script:
+
 ```
+./deploy.sh
+    ↓
+1. Fetch latest release from GitHub API
+2. Compare with current VERSION
+3. If newer version exists:
+   ├── git fetch --tags
+   ├── git checkout v<new-version>
+   ├── npm install
+   ├── Build client (vite build)
+   ├── Restart server (pm2)
+   └── Health check
+4. Log result
+```
+
+### Deploy Script Usage
+
+```bash
+# Check for updates and deploy if available
+./deploy.sh
+
+# Force deploy (even if same version)
+./deploy.sh --force
+
+# Rollback to a specific version
+./deploy.sh --rollback 1.0.0
+
+# Check status (current version, server health)
+./deploy.sh --status
+
+# Print current version
+./deploy.sh --version
+```
+
+### Automated Updates (Cron)
+
+Check for updates every 5 minutes:
+
+```bash
+crontab -e
+# Add:
+*/5 * * * * /opt/attendtrack/deploy.sh >> /opt/attendtrack/logs/cron.log 2>&1
+```
+
+### Manual Update Workflow
+
+```bash
+# On your development machine:
+# 1. Make changes
+git checkout -b feature/new-thing
+# ... code ...
+git commit -m "feat: add new thing"
+
+# 2. Merge to main
+git checkout main
+git merge feature/new-thing
+
+# 3. Bump version (creates tag, pushes)
+npm run release:minor
+
+# 4. On production server (automatic or manual):
+./deploy.sh
+```
+
+### Rollback
+
+```bash
+# Rollback to a specific version
+./deploy.sh --rollback 1.0.0
+
+# Check what version was running before
+cat logs/previous-version
+```
+
+### Security Measures for Remote Updates
+
+| Concern | Mitigation |
+|---------|-----------|
+| Unauthorized code | Only pulls from tagged releases on your GitHub repo |
+| MITM attacks | All GitHub API calls use HTTPS |
+| Failed deploy | Automatic rollback if health check fails after restart |
+| Secret exposure | `.env` is never overwritten during updates |
+| DB schema changes | Only backward-compatible migrations; manual review required |
+| Integrity | Git tags are immutable; same commit hash every time |
+
+### Health Check
+
+After every deploy or rollback, `deploy.sh` runs:
+
+```
+GET /api/health → {"status":"ok","timestamp":"..."}
+```
+
+Retries up to 5 times with 2-second delays. If health check fails, automatic rollback is triggered.
+
+### GitHub Setup
+
+For automated deployment, create a **deploy token**:
+
+1. Go to GitHub Settings → Developer settings → Personal access tokens → Fine-grained tokens
+2. Create token with read-only access to the repository
+3. On production server, configure git:
+   ```bash
+   git remote set-url origin https://<token>@github.com/krispytank/Attendance.git
+   ```
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for the full version history.
+
+### v1.0.0 — 2026-07-02
+
+**Core Features:**
+- GPS-validated check-in/out with geo-fence enforcement
+- Role-based access control (Admin, Supervisor, User)
+- Shift scheduling and assignment
+- Real-time attendance dashboard with duration timer
+- Internal messaging with notification preferences
+- Reports and analytics with charts
+- Bulk CSV user import
+- Password reset with email support
+
+**Security:**
+- JWT with type claim and token versioning
+- NoSQL injection protection (express-mongo-sanitize)
+- Regex escape for search queries
+- Rate limiting (general + auth-specific)
+- Helmet.js security headers
+- Password complexity enforcement
+
+**Infrastructure:**
+- Semantic versioning with git tags
+- CI/CD via GitHub Actions
+- Pull-based deployment with rollback
+- pm2 process management
+- ESLint configured for client and server
+- React Error Boundary
+
+---
 
 ## License
 
 MIT
-# checkin

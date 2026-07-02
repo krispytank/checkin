@@ -11,20 +11,30 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
-    "build": "npm run build:server && npm run build:client",
-    "build:server": "cd server && npm run build",
+    "build": "npm run build:client",
     "build:client": "cd client && npm run build",
     "start": "cd server && npm start",
+    "start:pm2": "pm2 start ecosystem.config.js",
+    "stop:pm2": "pm2 stop ecosystem.config.js",
+    "restart:pm2": "pm2 restart ecosystem.config.js",
     "test": "npm run test:server && npm run test:client",
     "test:server": "cd server && npm test",
     "test:client": "cd client && npm test",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "format": "prettier --write \"**/*.{js,jsx,json,md}\""
+    "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
+    "version": "npm version --no-git-tag-version",
+    "version:patch": "npm version patch --no-git-tag-version && git add VERSION && git commit -m \"chore: bump version to $(cat VERSION)\" && git tag v$(cat VERSION)",
+    "version:minor": "npm version minor --no-git-tag-version && git add VERSION && git commit -m \"chore: bump version to $(cat VERSION)\" && git tag v$(cat VERSION)",
+    "version:major": "npm version major --no-git-tag-version && git add VERSION && git commit -m \"chore: bump version to $(cat VERSION)\" && git tag v$(cat VERSION)",
+    "release:patch": "npm run version:patch && git push origin main --tags",
+    "release:minor": "npm run version:minor && git push origin main --tags",
+    "release:major": "npm run version:major && git push origin main --tags",
+    "deploy": "./deploy.sh",
+    "deploy:status": "./deploy.sh --status",
+    "deploy:force": "./deploy.sh --force"
   },
   "dependencies": {
-    "concurrently": "^8.2.2",
-    "object-inspect": "^1.13.4",
-    "pretty-format": "^29.7.0"
+    "concurrently": "^8.2.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",
@@ -32,12 +42,7 @@
     "eslint-plugin-react": "^7.34.1",
     "eslint-plugin-react-hooks": "^4.6.0",
     "prettier": "^3.2.5",
-    "vite": "^5.4.21",
-    "@types/bun": "latest"
+    "vite": "^5.4.21"
   },
-  "module": "index.ts",
-  "type": "module",
-  "peerDependencies": {
-    "typescript": "^5"
-  }
+  "type": "module"
 }

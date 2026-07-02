@@ -171,6 +171,22 @@ router.post('/', authenticate, async (req, res, next) => {
   }
 });
 
+// PUT /api/messages/read-all (must come before /:id/read)
+router.put('/read-all', authenticate, async (req, res, next) => {
+  try {
+    const db = getDB();
+
+    await db.collection('messages').updateMany(
+      { receiverId: req.user._id.toString(), read: false },
+      { $set: { read: true } }
+    );
+
+    res.json({ success: true, message: 'All messages marked as read' });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // PUT /api/messages/:id/read
 router.put('/:id/read', authenticate, async (req, res, next) => {
   try {
@@ -202,22 +218,6 @@ router.put('/:id/read', authenticate, async (req, res, next) => {
     );
 
     res.json({ success: true, message: 'Message marked as read' });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// PUT /api/messages/read-all
-router.put('/read-all', authenticate, async (req, res, next) => {
-  try {
-    const db = getDB();
-
-    await db.collection('messages').updateMany(
-      { receiverId: req.user._id.toString(), read: false },
-      { $set: { read: true } }
-    );
-
-    res.json({ success: true, message: 'All messages marked as read' });
   } catch (error) {
     next(error);
   }

@@ -5,6 +5,7 @@ import { getDB } from '../db.js';
 import { generateToken, authenticate } from '../middleware/auth.js';
 import { validateEmail, validatePassword, validateRequired } from '../middleware/validation.js';
 import { sendSystemNotification } from './notifications.js';
+import { sendPasswordResetEmail } from '../utils/mail.js';
 
 const router = Router();
 
@@ -51,7 +52,7 @@ router.post('/login', async (req, res, next) => {
     }
 
     // Generate token
-    const token = generateToken(user._id.toString(), user.role);
+    const token = generateToken(user._id.toString(), user.role, 'auth', user.tokenVersion || 0);
 
     // Return user data without password
     const { password: _, ...userData } = user;
@@ -136,7 +137,7 @@ router.post('/register', authenticate, async (req, res, next) => {
     if (!validatePassword(password)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Password must be at least 8 characters' 
+        message: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character' 
       });
     }
 
@@ -177,6 +178,7 @@ router.post('/register', authenticate, async (req, res, next) => {
       stationId: stationId || null,
       supervisorId: supervisorId || null,
       isActive: true,
+      tokenVersion: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -216,7 +218,7 @@ router.post('/change-password', authenticate, async (req, res, next) => {
     if (!validatePassword(newPassword)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'New password must be at least 8 characters' 
+        message: 'New password must be at least 8 characters with uppercase, lowercase, number, and special character' 
       });
     }
 
@@ -234,7 +236,7 @@ router.post('/change-password', authenticate, async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
     await db.collection('users').updateOne(
       { _id: new ObjectId(req.user._id) },
-      { $set: { password: hashedPassword, updatedAt: new Date() } }
+      { $set: { password: hashedPassword, updatedAt: new Date() }, $inc: { tokenVersion: 1 } }
     );
 
     res.json({ success: true, message: 'Password updated successfully' });
@@ -265,7 +267,7 @@ router.post('/forgot-password', async (req, res, next) => {
     }
 
     // Generate reset token
-    const resetToken = generateToken(user._id.toString(), user.role);
+    const resetToken = generateToken(user._id.toString(), user.role, 'reset');
     const resetExpires = new Date(Date.now() + 3600000); // 1 hour
 
     // Store reset token
@@ -281,8 +283,8 @@ router.post('/forgot-password', async (req, res, next) => {
       { upsert: true }
     );
 
-    // In production, send email here
-    console.log(`Password reset token for ${email}: ${resetToken}`);
+    // Send reset email (non-blocking)
+    sendPasswordResetEmail(user.email, resetToken).catch(() => {});
 
     res.json({ 
       success: true, 
@@ -305,7 +307,7 @@ router.post('/reset-password', async (req, res, next) => {
     if (!validatePassword(newPassword)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Password must be at least 8 characters' 
+        message: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character' 
       });
     }
 
@@ -330,7 +332,7 @@ router.post('/reset-password', async (req, res, next) => {
     // Update user password
     await db.collection('users').updateOne(
       { _id: new ObjectId(resetRecord.userId) },
-      { $set: { password: hashedPassword, updatedAt: new Date() } }
+      { $set: { password: hashedPassword, updatedAt: new Date() }, $inc: { tokenVersion: 1 } }
     );
 
     // Delete reset record

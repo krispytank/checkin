@@ -3,7 +3,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import rateLimit from 'express-rate-limit';
+import mongoSanitize from 'express-mongo-sanitize';
 import { connectDB } from './db.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
@@ -16,8 +19,15 @@ import departmentRoutes from './routes/departments.js';
 import notificationRoutes from './routes/notifications.js';
 import configRoutes from './routes/config.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // Load environment variables
 dotenv.config({ path: new URL('../.env', import.meta.url).pathname });
+
+if (process.env.NODE_ENV === 'production' && !process.env.CLIENT_URL) {
+  throw new Error('FATAL: CLIENT_URL environment variable is required in production');
+}
 
 // Create Express app
 const app = express();
@@ -26,25 +36,36 @@ const PORT = process.env.PORT || 3000;
 // Connect to MongoDB
 await connectDB();
 
-// Middleware
+// Security Middleware
 app.use(helmet());
+app.use(mongoSanitize());
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
     ? process.env.CLIENT_URL 
     : 'http://localhost:5173',
   credentials: true,
 }));
-app.use(morgan('dev'));
-app.use(express.json());
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Rate limiting
+// General rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP, please try again later.',
 });
 app.use('/api/', limiter);
+
+// Stricter rate limiting for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  message: 'Too many authentication attempts, please try again later.',
+});
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/forgot-password', authLimiter);
+app.use('/api/auth/reset-password', authLimiter);
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -63,6 +84,33 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// Version endpoint
+app.get('/api/version', async (req, res) => {
+  try {
+    const fs = await import('fs');
+    const versionPath = join(__dirname, '../../VERSION');
+    const version = fs.readFileSync(versionPath, 'utf8').trim();
+    res.json({ version, timestamp: new Date().toISOString() });
+  } catch {
+    res.json({ version: 'unknown', timestamp: new Date().toISOString() });
+  }
+});
+
+// Serve static client files in production
+if (process.env.NODE_ENV === 'production') {
+  const clientDistPath = join(__dirname, '../../client/dist');
+  app.use(express.static(clientDistPath));
+  
+  // SPA fallback — serve index.html for all non-API routes
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(join(clientDistPath, 'index.html'));
+    } else {
+      res.status(404).json({ success: false, message: 'Route not found' });
+    }
+  });
+}
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -73,13 +121,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ 
-    success: false, 
-    message: 'Route not found' 
+// 404 handler (API only in production, all routes in dev)
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res) => {
+    res.status(404).json({ 
+      success: false, 
+      message: 'Route not found' 
+    });
   });
-});
+}
 
 // Start server
 app.listen(PORT, () => {

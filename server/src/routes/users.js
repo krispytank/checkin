@@ -8,7 +8,8 @@ import {
   validatePassword, 
   validateRequired,
   validateRole,
-  validatePagination 
+  validatePagination,
+  escapeRegex
 } from '../middleware/validation.js';
 import config from '../config.js';
 
@@ -28,10 +29,11 @@ router.get('/', authenticate, async (req, res, next) => {
     if (stationId) filter.stationId = stationId;
     
     if (search) {
+      const sanitizedSearch = escapeRegex(search);
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { employeeId: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: sanitizedSearch, $options: 'i' } },
+        { employeeId: { $regex: sanitizedSearch, $options: 'i' } },
+        { email: { $regex: sanitizedSearch, $options: 'i' } },
       ];
     }
 
@@ -180,6 +182,7 @@ router.post('/bulk', authenticate, authorize('admin'), async (req, res, next) =>
           stationId: stationId || null,
           supervisorId: null,
           isActive: true,
+          tokenVersion: 0,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
@@ -224,7 +227,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
     if (!validatePassword(password)) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Password must be at least 8 characters' 
+        message: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character' 
       });
     }
     if (!validateRole(role)) {
@@ -268,6 +271,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
       stationId: stationId || null,
       supervisorId: supervisorId || null,
       isActive: true,
+      tokenVersion: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -354,7 +358,10 @@ router.put('/:id', authenticate, async (req, res, next) => {
 
     // Only admin can change role and active status
     if (req.user.role === 'admin') {
-      if (role && validateRole(role)) updateData.role = role;
+      if (role && validateRole(role) && role !== user.role) {
+        updateData.role = role;
+        updateData.$inc = { tokenVersion: 1 };
+      }
       if (isActive !== undefined) updateData.isActive = isActive;
     }
 
@@ -363,15 +370,20 @@ router.put('/:id', authenticate, async (req, res, next) => {
       if (!validatePassword(password)) {
         return res.status(400).json({ 
           success: false, 
-          message: 'Password must be at least 8 characters' 
+          message: 'Password must be at least 8 characters with uppercase, lowercase, number, and special character' 
         });
       }
       updateData.password = await bcrypt.hash(password, 12);
+      if (!updateData.$inc) updateData.$inc = { tokenVersion: 1 };
     }
+
+    const { $inc, ...$set } = updateData;
+    const updateOp = { $set };
+    if ($inc) updateOp.$inc = $inc;
 
     await db.collection('users').updateOne(
       { _id: new ObjectId(id) },
-      { $set: updateData }
+      updateOp
     );
 
     const updatedUser = await db.collection('users').findOne(

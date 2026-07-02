@@ -1,0 +1,131 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run server lint
+        run: npm run lint --workspace=server
+
+      - name: Run server tests
+        run: npm run test:server
+
+      - name: Run client tests
+        run: npm run test:client
+
+  build:
+    name: Build & Release
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build client
+        run: npm run build:client
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "tag=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create client build artifact
+        run: |
+          cd client/dist
+          zip -r ../../client-dist-${{ steps.version.outputs.tag }}.zip .
+          cd ../..
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [[ -n "$PREV_TAG" ]]; then
+            echo "## Changes since $PREV_TAG" > release-notes.md
+            echo "" >> release-notes.md
+            git log ${PREV_TAG}..HEAD --pretty=format:"- %s" >> release-notes.md
+          else
+            echo "## Initial Release" > release-notes.md
+            echo "" >> release-notes.md
+            echo "- First release of AttendTrack" >> release-notes.md
+          fi
+          
+          echo "" >> release-notes.md
+          echo "---" >> release-notes.md
+          echo "### Deployment" >> release-notes.md
+          echo '```bash' >> release-notes.md
+          echo "# On your production server:" >> release-notes.md
+          echo "./deploy.sh --force" >> release-notes.md
+          echo '```' >> release-notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: AttendTrack ${{ steps.version.outputs.tag }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: false
+          files: |
+            client-dist-${{ steps.version.outputs.tag }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update VERSION file
+        run: |
+          VERSION="${{ steps.version.outputs.tag }}"
+          VERSION="${VERSION#v}"
+          echo "$VERSION" > VERSION
+
+      - name: Commit VERSION update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION
+          git diff --cached --quiet || git commit -m "chore: update VERSION to ${{ steps.version.outputs.tag }}"
+          git push origin HEAD:main || true
