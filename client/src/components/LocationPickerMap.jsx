@@ -9,7 +9,7 @@ const DEFAULT_ZOOM = 13;
 
 const stationIcon = new L.DivIcon({
   className: 'custom-marker',
-  html: `<div style="background:#2563eb;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
+  html: `<div style="background:#009A44;width:16px;height:16px;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 });
@@ -191,8 +191,8 @@ export default function LocationPickerMap({ latitude, longitude, radius, onLocat
                 center={[lat, lng]}
                 radius={radius || 100}
                 pathOptions={{
-                  color: '#2563eb',
-                  fillColor: '#2563eb',
+                  color: '#009A44',
+                  fillColor: '#009A44',
                   fillOpacity: 0.1,
                   weight: 2,
                 }}

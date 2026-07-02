@@ -66,7 +66,7 @@ export default function TeamPage() {
       {/* Status summary */}
       <div className="grid gap-4 md:grid-cols-5">
         <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-2xl font-bold text-green-600">{statusCounts.present}</p>
+          <p className="text-2xl font-bold text-[#009A44]">{statusCounts.present}</p>
           <p className="text-sm text-muted-foreground">Present</p>
         </div>
         <div className="rounded-lg border bg-card p-4 text-center">
@@ -74,15 +74,15 @@ export default function TeamPage() {
           <p className="text-sm text-muted-foreground">Late</p>
         </div>
         <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-2xl font-bold text-red-600">{statusCounts.absent}</p>
+          <p className="text-2xl font-bold text-destructive">{statusCounts.absent}</p>
           <p className="text-sm text-muted-foreground">Absent</p>
         </div>
         <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-2xl font-bold text-orange-600">{statusCounts.halfDay}</p>
+          <p className="text-2xl font-bold text-[#8A704C]">{statusCounts.halfDay}</p>
           <p className="text-sm text-muted-foreground">Half Day</p>
         </div>
         <div className="rounded-lg border bg-card p-4 text-center">
-          <p className="text-2xl font-bold text-blue-600">{statusCounts.overtime}</p>
+          <p className="text-2xl font-bold text-primary">{statusCounts.overtime}</p>
           <p className="text-sm text-muted-foreground">Overtime</p>
         </div>
       </div>

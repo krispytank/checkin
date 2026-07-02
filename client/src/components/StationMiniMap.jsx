@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 
 const stationIcon = new L.DivIcon({
   className: 'custom-marker',
-  html: `<div style="background:#2563eb;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>`,
+  html: `<div style="background:#009A44;width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>`,
   iconSize: [12, 12],
   iconAnchor: [6, 6],
 });
@@ -29,8 +29,8 @@ export default function StationMiniMap({ station }) {
           center={center}
           radius={station.radiusMeters}
           pathOptions={{
-            color: '#2563eb',
-            fillColor: '#2563eb',
+            color: '#009A44',
+            fillColor: '#009A44',
             fillOpacity: 0.1,
             weight: 1.5,
           }}

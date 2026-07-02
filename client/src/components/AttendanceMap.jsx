@@ -8,7 +8,7 @@ const DEFAULT_ZOOM = 15;
 
 const checkInIcon = new L.DivIcon({
   className: 'custom-marker',
-  html: `<div style="background:#16a34a;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+  html: `<div style="background:#009A44;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
     <svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
   </div>`,
   iconSize: [18, 18],
@@ -17,7 +17,7 @@ const checkInIcon = new L.DivIcon({
 
 const checkOutIcon = new L.DivIcon({
   className: 'custom-marker',
-  html: `<div style="background:#dc2626;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+  html: `<div style="background:#8A704C;width:18px;height:18px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
     <svg width="10" height="10" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
   </div>`,
   iconSize: [18, 18],
@@ -99,8 +99,8 @@ export default function AttendanceMap({ checkInLocation, checkOutLocation, showA
                 center={[checkInLocation.latitude, checkInLocation.longitude]}
                 radius={checkInLocation.accuracy}
                 pathOptions={{
-                  color: '#16a34a',
-                  fillColor: '#16a34a',
+                  color: '#009A44',
+                  fillColor: '#009A44',
                   fillOpacity: 0.1,
                   weight: 1,
                 }}
@@ -112,7 +112,7 @@ export default function AttendanceMap({ checkInLocation, checkOutLocation, showA
             >
               <Popup>
                 <div className="text-sm">
-                  <strong className="text-green-600">Check-in</strong>
+                  <strong className="text-[#009A44]">Check-in</strong>
                   <br />
                   {checkInLocation.address || `${checkInLocation.latitude.toFixed(4)}, ${checkInLocation.longitude.toFixed(4)}`}
                   {showAccuracy && checkInLocation.accuracy && (
@@ -130,8 +130,8 @@ export default function AttendanceMap({ checkInLocation, checkOutLocation, showA
                 center={[checkOutLocation.latitude, checkOutLocation.longitude]}
                 radius={checkOutLocation.accuracy}
                 pathOptions={{
-                  color: '#dc2626',
-                  fillColor: '#dc2626',
+                  color: '#8A704C',
+                  fillColor: '#8A704C',
                   fillOpacity: 0.1,
                   weight: 1,
                 }}
@@ -143,7 +143,7 @@ export default function AttendanceMap({ checkInLocation, checkOutLocation, showA
             >
               <Popup>
                 <div className="text-sm">
-                  <strong className="text-red-600">Check-out</strong>
+                  <strong className="text-[#8A704C]">Check-out</strong>
                   <br />
                   {checkOutLocation.address || `${checkOutLocation.latitude.toFixed(4)}, ${checkOutLocation.longitude.toFixed(4)}`}
                   {showAccuracy && checkOutLocation.accuracy && (

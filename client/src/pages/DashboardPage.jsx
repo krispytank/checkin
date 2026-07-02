@@ -54,6 +54,10 @@ export default function DashboardPage() {
       setShowCheckInModal(false);
       setGpsLocation(null);
     },
+    onError: (error) => {
+      const msg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'Check-in failed';
+      setGpsError(msg);
+    },
   });
 
   // Check-out mutation
@@ -63,6 +67,10 @@ export default function DashboardPage() {
       queryClient.invalidateQueries(['records', 'today']);
       setShowCheckOutModal(false);
       setGpsLocation(null);
+    },
+    onError: (error) => {
+      const msg = error?.response?.data?.error || error?.response?.data?.message || error.message || 'Check-out failed';
+      setGpsError(msg);
     },
   });
 
@@ -142,12 +150,14 @@ export default function DashboardPage() {
 
   const confirmCheckIn = () => {
     if (gpsLocation) {
+      setGpsError('');
       checkInMutation.mutate(gpsLocation);
     }
   };
 
   const confirmCheckOut = () => {
     if (gpsLocation) {
+      setGpsError('');
       checkOutMutation.mutate(gpsLocation);
     }
   };
@@ -204,7 +214,7 @@ export default function DashboardPage() {
 
         <div className="rounded-xl border bg-card p-6 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-500/10 text-green-500">
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#009A44]/10 text-[#009A44]">
               <Timer className="h-6 w-6" />
             </div>
             <div>
@@ -295,7 +305,7 @@ export default function DashboardPage() {
               <button
                 onClick={handleCheckIn}
                 disabled={checkInMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-3 text-sm font-medium text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#009A44] px-4 py-3 text-sm font-medium text-white hover:bg-[#008038] transition-colors disabled:opacity-50"
               >
                 <CheckCircle className="h-5 w-5" />
                 Check In
@@ -304,14 +314,14 @@ export default function DashboardPage() {
               <button
                 onClick={handleCheckOut}
                 disabled={checkOutMutation.isPending}
-                className="w-full flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-medium text-white hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-2 rounded-lg bg-[#8A704C] px-4 py-3 text-sm font-medium text-white hover:bg-[#7A633C] transition-colors disabled:opacity-50"
               >
                 <XCircle className="h-5 w-5" />
                 Check Out
               </button>
             ) : (
               <div className="flex items-center justify-center gap-2 rounded-lg bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
-                <CheckCircle className="h-5 w-5 text-green-500" />
+                <CheckCircle className="h-5 w-5 text-[#009A44]" />
                 Completed for today
               </div>
             )}
@@ -336,13 +346,13 @@ export default function DashboardPage() {
           <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
             {checkInLocation && (
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                <div className="h-3 w-3 rounded-full bg-[#009A44]"></div>
                 <span>Check-in: {checkInLocation.latitude.toFixed(4)}, {checkInLocation.longitude.toFixed(4)}</span>
               </div>
             )}
             {checkOutLocation && (
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full bg-red-500"></div>
+                <div className="h-3 w-3 rounded-full bg-[#8A704C]"></div>
                 <span>Check-out: {checkOutLocation.latitude.toFixed(4)}, {checkOutLocation.longitude.toFixed(4)}</span>
               </div>
             )}
@@ -357,11 +367,11 @@ export default function DashboardPage() {
         {weeklySummary ? (
           <div className="grid gap-4 md:grid-cols-5">
             <div className="text-center">
-              <p className="text-3xl font-bold text-green-600">{weeklySummary.present}</p>
+              <p className="text-3xl font-bold text-[#009A44]">{weeklySummary.present}</p>
               <p className="text-sm text-muted-foreground">Present</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-red-600">{weeklySummary.absent}</p>
+              <p className="text-3xl font-bold text-destructive">{weeklySummary.absent}</p>
               <p className="text-sm text-muted-foreground">Absent</p>
             </div>
             <div className="text-center">
@@ -369,11 +379,11 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground">Late</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-orange-600">{weeklySummary.halfDay}</p>
+              <p className="text-3xl font-bold text-[#8A704C]">{weeklySummary.halfDay}</p>
               <p className="text-sm text-muted-foreground">Half Day</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-blue-600">{weeklySummary.overtime}</p>
+              <p className="text-3xl font-bold text-primary">{weeklySummary.overtime}</p>
               <p className="text-sm text-muted-foreground">Overtime</p>
             </div>
           </div>
@@ -428,7 +438,7 @@ export default function DashboardPage() {
                   <button
                     onClick={confirmCheckIn}
                     disabled={checkInMutation.isPending}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#009A44] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#008038] disabled:opacity-50"
                   >
                     {checkInMutation.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -475,7 +485,7 @@ export default function DashboardPage() {
 
                 <div className="rounded-lg bg-muted p-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <MapPin className="h-4 w-4 text-red-500" />
+                    <MapPin className="h-4 w-4 text-[#8A704C]" />
                     <span className="text-sm font-medium">Location Acquired</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
@@ -494,7 +504,7 @@ export default function DashboardPage() {
                   <button
                     onClick={confirmCheckOut}
                     disabled={checkOutMutation.isPending}
-                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#8A704C] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#7A633C] disabled:opacity-50"
                   >
                     {checkOutMutation.isPending ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
