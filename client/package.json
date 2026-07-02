@@ -60,6 +60,11 @@
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.1",
     "vite": "^8.1.2",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "@types/bun": "latest"
+  },
+  "private": true,
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }

@@ -1,9 +1,12 @@
 {
   "name": "server",
   "version": "1.0.0",
+  "private": true,
   "description": "AttendTrack Backend API Server",
-  "main": "src/index.js",
+  "license": "ISC",
+  "author": "",
   "type": "module",
+  "main": "src/index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
@@ -28,6 +31,10 @@
     "nodemon": "^3.0.2",
     "pretty-format": "^29.7.0",
     "supertest": "^6.3.3",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }
