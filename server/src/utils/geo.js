@@ -1,3 +1,5 @@
+import config from '../config.js';
+
 /**
  * Calculate distance between two GPS coordinates using Haversine formula
  * @param {number} lat1 - Latitude of first point
@@ -62,8 +64,8 @@ export function validateGeoFence(userLocation, station, maxAccuracy = 50) {
 export function calculateAttendanceStatus(
   checkInTime,
   checkOutTime = null,
-  workStartTime = '08:00',
-  workEndTime = '17:00'
+  workStartTime = config.workStartTime,
+  workEndTime = config.workEndTime
 ) {
   if (!checkInTime) return 'absent';
   
@@ -151,7 +153,7 @@ export function getCurrentTime() {
  * @param {string} workEndTime - Work end time (HH:MM)
  * @returns {boolean}
  */
-export function isWithinWorkHours(workStartTime = '08:00', workEndTime = '17:00') {
+export function isWithinWorkHours(workStartTime = config.workStartTime, workEndTime = config.workEndTime) {
   const currentTime = getCurrentTime();
   return currentTime >= workStartTime && currentTime <= workEndTime;
 }

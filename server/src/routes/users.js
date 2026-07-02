@@ -10,6 +10,7 @@ import {
   validateRole,
   validatePagination 
 } from '../middleware/validation.js';
+import config from '../config.js';
 
 const router = Router();
 
@@ -137,8 +138,8 @@ router.post('/bulk', authenticate, authorize('admin'), async (req, res, next) =>
           results.failed++;
           continue;
         }
-        if (!password || password.length < 8) {
-          results.errors.push({ row: rowNum, email, message: 'Password must be at least 8 characters' });
+        if (!password || password.length < config.validation.minPasswordLength) {
+          results.errors.push({ row: rowNum, email, message: `Password must be at least ${config.validation.minPasswordLength} characters` });
           results.failed++;
           continue;
         }

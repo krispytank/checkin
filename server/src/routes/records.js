@@ -9,6 +9,7 @@ import {
   calculateHoursWorked 
 } from '../utils/geo.js';
 import { sendSystemNotification } from './notifications.js';
+import config from '../config.js';
 
 const router = Router();
 
@@ -128,7 +129,7 @@ router.post('/check-in', authenticate, async (req, res, next) => {
     }
 
     // Validate geo-fence
-    const geoResult = validateGeoFence(location, station, 50);
+    const geoResult = validateGeoFence(location, station, config.maxAccuracyMeters);
     
     if (!geoResult.allowed) {
       let message = 'Check-in failed: ';
@@ -178,7 +179,7 @@ router.post('/check-in', authenticate, async (req, res, next) => {
       });
     }
 
-    const workStartTime = shift?.startTime || '08:00';
+    const workStartTime = shift?.startTime || config.workStartTime;
     const isLate = checkInEvent.timestamp.toTimeString().slice(0, 5) > workStartTime;
 
     // Create attendance record
@@ -256,7 +257,7 @@ router.post('/check-out', authenticate, async (req, res, next) => {
     }
 
     // Validate geo-fence
-    const geoResult = validateGeoFence(location, station, 50);
+    const geoResult = validateGeoFence(location, station, config.maxAccuracyMeters);
     
     if (!geoResult.allowed) {
       let message = 'Check-out failed: ';
@@ -318,8 +319,8 @@ router.post('/check-out', authenticate, async (req, res, next) => {
         _id: new ObjectId(shiftAssignment.shiftId),
       });
     }
-    const workStartTime = shift?.startTime || '08:00';
-    const workEndTime = shift?.endTime || '17:00';
+    const workStartTime = shift?.startTime || config.workStartTime;
+    const workEndTime = shift?.endTime || config.workEndTime;
 
     // Calculate final status using the user's actual shift times
     const finalStatus = calculateAttendanceStatus(

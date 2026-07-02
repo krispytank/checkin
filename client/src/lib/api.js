@@ -111,4 +111,8 @@ export const notificationsAPI = {
   getUnreadCount: () => api.get('/notifications/unread-count'),
 };
 
+export const configAPI = {
+  get: () => api.get('/config'),
+};
+
 export default api;

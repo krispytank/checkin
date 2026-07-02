@@ -14,6 +14,7 @@ import messageRoutes from './routes/messages.js';
 import jobTitleRoutes from './routes/jobTitles.js';
 import departmentRoutes from './routes/departments.js';
 import notificationRoutes from './routes/notifications.js';
+import configRoutes from './routes/config.js';
 
 // Load environment variables
 dotenv.config({ path: new URL('../.env', import.meta.url).pathname });
@@ -55,6 +56,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/job-titles', jobTitleRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/config', configRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
