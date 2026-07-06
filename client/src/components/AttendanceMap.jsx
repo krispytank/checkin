@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Circle, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { cn } from '../lib/utils.js';
 
 const DEFAULT_CENTER = [-1.2921, 36.8219];
 const DEFAULT_ZOOM = 15;
@@ -63,7 +64,7 @@ function LocateButton({ center }) {
   return null;
 }
 
-export default function AttendanceMap({ checkInLocation, checkOutLocation, showAccuracy }) {
+export default function AttendanceMap({ checkInLocation, checkOutLocation, showAccuracy, className }) {
   const positions = [];
 
   if (checkInLocation?.latitude && checkInLocation?.longitude) {
@@ -78,13 +79,16 @@ export default function AttendanceMap({ checkInLocation, checkOutLocation, showA
   const zoom = positions.length === 1 ? DEFAULT_ZOOM : 14;
 
   return (
-    <div className="rounded-lg overflow-hidden border relative">
+    <div className={cn("rounded-lg overflow-hidden border relative", className)}>
       <MapContainer
         center={center}
         zoom={zoom}
-        style={{ height: '200px', width: '100%' }}
-        scrollWheelZoom={false}
+        style={{ height: '100%', width: '100%' }}
+        scrollWheelZoom={true}
+        zoomControl={true}
         dragging={true}
+        doubleClickZoom={true}
+        touchZoom={true}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

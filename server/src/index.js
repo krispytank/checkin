@@ -18,6 +18,13 @@ import jobTitleRoutes from './routes/jobTitles.js';
 import departmentRoutes from './routes/departments.js';
 import notificationRoutes from './routes/notifications.js';
 import configRoutes from './routes/config.js';
+import equipmentRoutes from './routes/equipment.js';
+import caseRoutes from './routes/cases.js';
+import bookingRoutes from './routes/bookings.js';
+import bookerRoutes from './routes/bookers.js';
+import vehicleRoutes from './routes/vehicles.js';
+import tripRoutes from './routes/trips.js';
+import parkingRoutes from './routes/parking.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -78,6 +85,16 @@ app.use('/api/job-titles', jobTitleRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/config', configRoutes);
+app.use('/api/equipment', equipmentRoutes);
+app.use('/api/cases', caseRoutes);
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/bookers', bookerRoutes);
+app.use('/api/vehicles', vehicleRoutes);
+app.use('/api/trips', tripRoutes);
+app.use('/api/parking', parkingRoutes);
+
+// Serve uploaded files
+app.use('/uploads', express.static(join(__dirname, '../uploads')));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

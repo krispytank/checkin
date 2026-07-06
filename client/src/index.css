@@ -76,6 +76,18 @@
     background: hsl(var(--muted-foreground));
     border-radius: 3px;
   }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Mobile-friendly touch targets */
+@media (max-width: 1023px) {
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
 }
 
 /* Leaflet map container styling */

@@ -435,4 +435,122 @@ router.get('/summary/weekly', authenticate, async (req, res, next) => {
   }
 });
 
+// GET /api/records/analytics — all records in range + user/shift info for charts
+router.get('/analytics', authenticate, async (req, res, next) => {
+  try {
+    const { userId, startDate, endDate } = req.query;
+    const db = getDB();
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ success: false, message: 'startDate and endDate are required' });
+    }
+
+    // Build date filter
+    const dateFilter = { $gte: startDate, $lte: endDate };
+
+    // Build user filter
+    const userFilter = {};
+    if (req.user.role === 'user') {
+      userFilter._id = req.user._id;
+    } else if (userId) {
+      try { userFilter._id = new ObjectId(userId); } catch (e) { /* ignore */ }
+    }
+
+    // Fetch users
+    const usersList = await db.collection('users')
+      .find(userFilter)
+      .project({ password: 0 })
+      .toArray();
+
+    const userIds = usersList.map(u => u._id.toString());
+
+    // Fetch all records in range (no pagination) — only actual data
+    const records = await db.collection('records')
+      .find({
+        userId: { $in: userIds },
+        date: dateFilter,
+      })
+      .sort({ date: 1 })
+      .toArray();
+
+    // Build lookup map
+    const userMap = {};
+    usersList.forEach(u => { userMap[u._id.toString()] = u; });
+
+    // Per-user analytics — based ONLY on actual records
+    const userAnalytics = usersList.map(user => {
+      const uid = user._id.toString();
+      const userRecords = records.filter(r => r.userId === uid);
+
+      const present = userRecords.filter(r => r.status === 'present').length;
+      const late = userRecords.filter(r => r.status === 'late').length;
+      const halfDay = userRecords.filter(r => r.status === 'half-day').length;
+      const overtime = userRecords.filter(r => r.status === 'overtime').length;
+      const totalLogged = present + late + halfDay + overtime;
+
+      const totalHours = userRecords.reduce((sum, r) => sum + (r.totalHours || 0), 0);
+      const avgHours = totalLogged > 0 ? totalHours / totalLogged : 0;
+      const punctualityRate = totalLogged > 0
+        ? (present / totalLogged * 100)
+        : 0;
+
+      return {
+        userId: uid,
+        name: user.name || 'Unknown',
+        department: user.department || '',
+        totalLogged,
+        present,
+        late,
+        halfDay,
+        overtime,
+        totalHours: Math.round(totalHours * 100) / 100,
+        avgHours: Math.round(avgHours * 100) / 100,
+        punctualityRate: Math.round(punctualityRate * 10) / 10,
+      };
+    }).filter(u => u.totalLogged > 0); // only users with actual records
+
+    // Daily trend — only dates that have at least one record
+    const datesWithRecords = [...new Set(records.map(r => r.date))].sort();
+    const dailyTrend = datesWithRecords.map(date => {
+      const dayRecords = records.filter(r => r.date === date);
+      const dayOfWeek = new Date(date).getDay();
+
+      return {
+        date,
+        day: config.daysOfWeek[dayOfWeek]?.slice(0, 3) || '',
+        present: dayRecords.filter(r => r.status === 'present').length,
+        late: dayRecords.filter(r => r.status === 'late').length,
+        overtime: dayRecords.filter(r => r.status === 'overtime').length,
+        halfDay: dayRecords.filter(r => r.status === 'half-day').length,
+      };
+    });
+
+    // Overall stats — actual records only
+    const totalPresent = records.filter(r => r.status === 'present').length;
+    const totalLate = records.filter(r => r.status === 'late').length;
+    const totalOvertime = records.filter(r => r.status === 'overtime').length;
+    const totalHalfDay = records.filter(r => r.status === 'half-day').length;
+    const totalHoursAll = records.reduce((sum, r) => sum + (r.totalHours || 0), 0);
+
+    res.json({
+      success: true,
+      data: {
+        userAnalytics,
+        dailyTrend,
+        summary: {
+          totalUsers: usersList.length,
+          totalRecords: records.length,
+          totalPresent,
+          totalLate,
+          totalOvertime,
+          totalHalfDay,
+          totalHours: Math.round(totalHoursAll * 100) / 100,
+        },
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

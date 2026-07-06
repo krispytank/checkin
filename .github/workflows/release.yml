@@ -92,7 +92,7 @@ jobs:
           else
             echo "## Initial Release" > release-notes.md
             echo "" >> release-notes.md
-            echo "- First release of AttendTrack" >> release-notes.md
+            echo "- First release of Mahakama Access" >> release-notes.md
           fi
           
           echo "" >> release-notes.md
@@ -107,7 +107,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: AttendTrack ${{ steps.version.outputs.tag }}
+          name: Mahakama Access ${{ steps.version.outputs.tag }}
           body_path: release-notes.md
           draft: false
           prerelease: false

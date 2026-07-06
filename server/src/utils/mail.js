@@ -33,7 +33,7 @@ export async function sendPasswordResetEmail(email, resetToken) {
     <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 480px; margin: 0 auto; padding: 2rem;">
       <h2 style="color: #333;">Password Reset Request</h2>
       <p style="color: #555; line-height: 1.6;">
-        You requested a password reset for your AttendTrack account.
+        You requested a password reset for your Mahakama Access account.
       </p>
       <p style="color: #555; line-height: 1.6;">
         Click the button below to reset your password. This link expires in 1 hour.
@@ -62,7 +62,7 @@ export async function sendPasswordResetEmail(email, resetToken) {
     await transport.sendMail({
       from: process.env.EMAIL_FROM || 'noreply@attendtrack.com',
       to: email,
-      subject: 'AttendTrack — Password Reset',
+      subject: 'Mahakama Access — Password Reset',
       html,
     });
     console.log(`[Mail] Password reset email sent to ${email}`);

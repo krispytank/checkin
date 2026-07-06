@@ -35,9 +35,9 @@ export default function LoginPage() {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
             <Shield className="h-8 w-8" />
           </div>
-          <h1 className="mt-6 text-3xl font-bold">AttendTrack</h1>
+          <h1 className="mt-6 text-3xl font-bold">Mahakama Access</h1>
           <p className="mt-2 text-muted-foreground">
-            GPS-Verified Time & Attendance
+            Secure, Accessible and Available Services
           </p>
         </div>
 

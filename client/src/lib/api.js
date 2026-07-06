@@ -62,6 +62,7 @@ export const recordsAPI = {
   checkIn: (location) => api.post('/records/check-in', { location }),
   checkOut: (location) => api.post('/records/check-out', { location }),
   getWeeklySummary: (params) => api.get('/records/summary/weekly', { params }),
+  getAnalytics: (params) => api.get('/records/analytics', { params }),
 };
 
 export const stationsAPI = {
@@ -113,6 +114,77 @@ export const notificationsAPI = {
 
 export const configAPI = {
   get: () => api.get('/config'),
+};
+
+export const moduleAccessAPI = {
+  update: (userId, module, data) => api.put(`/users/${userId}/module-access`, { module, ...data }),
+  updateBulk: (userId, moduleAccess) => api.put(`/users/${userId}/module-access/bulk`, { moduleAccess }),
+};
+
+export const equipmentAPI = {
+  list: (params) => api.get('/equipment', { params }),
+  getAvailable: (params) => api.get('/equipment/available', { params }),
+  get: (id) => api.get(`/equipment/${id}`),
+  create: (data) => api.post('/equipment', data),
+  uploadCsv: (formData) => api.post('/equipment/csv', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  update: (id, data) => api.put(`/equipment/${id}`, data),
+  delete: (id) => api.delete(`/equipment/${id}`),
+  getTypes: () => api.get('/equipment/types'),
+  createType: (name) => api.post('/equipment/types', { name }),
+  deleteType: (name) => api.delete(`/equipment/types/${encodeURIComponent(name)}`),
+};
+
+export const casesAPI = {
+  list: (params) => api.get('/cases', { params }),
+  get: (id) => api.get(`/cases/${id}`),
+  create: (data) => api.post('/cases', data),
+  update: (id, data) => api.put(`/cases/${id}`, data),
+  delete: (id) => api.delete(`/cases/${id}`),
+};
+
+export const bookingsAPI = {
+  list: (params) => api.get('/bookings', { params }),
+  get: (id) => api.get(`/bookings/${id}`),
+  create: (data) => api.post('/bookings', data),
+  uploadPdf: (id, formData) => api.post(`/bookings/${id}/pdf`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  updateStatus: (id, status) => api.put(`/bookings/${id}/status`, { status }),
+};
+
+export const bookersAPI = {
+  list: () => api.get('/bookers'),
+  check: () => api.get('/bookers/check'),
+  add: (userId) => api.post('/bookers', { userId }),
+  remove: (userId) => api.delete(`/bookers/${userId}`),
+};
+
+export const vehicleAPI = {
+  list: (params) => api.get('/vehicles', { params }),
+  available: (params) => api.get('/vehicles/available', { params }),
+  get: (id) => api.get(`/vehicles/${id}`),
+  create: (data) => api.post('/vehicles', data),
+  update: (id, data) => api.put(`/vehicles/${id}`, data),
+  delete: (id) => api.delete(`/vehicles/${id}`),
+};
+
+export const tripsAPI = {
+  list: (params) => api.get('/trips', { params }),
+  get: (id) => api.get(`/trips/${id}`),
+  create: (data) => api.post('/trips', data),
+  updateStatus: (id, status) => api.put(`/trips/${id}/status`, { status }),
+};
+
+export const parkingAPI = {
+  list: (params) => api.get('/parking', { params }),
+  available: (params) => api.get('/parking/available', { params }),
+  stats: () => api.get('/parking/stats'),
+  get: (id) => api.get(`/parking/${id}`),
+  create: (data) => api.post('/parking', data),
+  update: (id, data) => api.put(`/parking/${id}`, data),
+  delete: (id) => api.delete(`/parking/${id}`),
 };
 
 export default api;

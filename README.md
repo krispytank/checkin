@@ -1,9 +1,9 @@
-# AttendTrack
+# Mahakama Access
 
-> GPS-Verified Time & Attendance System
-> Version: 1.0.0
+> Court Management System
+> Version: 2.0.0
 
-A full-stack time and attendance system with GPS geo-fencing, shift management, internal messaging, role-based access control, and pull-based deployment from GitHub.
+A modular court management system with three independent modules: Time Attendance, Equipment Booking, and Fleet Management. Each module shares common user/auth infrastructure with dynamic per-module access control.
 
 ---
 
@@ -28,17 +28,16 @@ A full-stack time and attendance system with GPS geo-fencing, shift management, 
 
 ## Overview
 
-AttendTrack is a GPS-verified time and attendance management system. Employees check in/out via their device GPS, which is validated against configurable geo-fence stations. Supervisors monitor team attendance in real-time, and admins manage the full system including users, stations, shifts, departments, and job titles.
+Mahakama Access is a modular court management system designed for judicial institutions. It provides three independent modules that share a common user and authentication infrastructure:
 
 **Key Capabilities:**
-- GPS-validated check-in/out with geo-fence enforcement
-- Role-based access control (Admin, Supervisor, User)
-- Shift scheduling and assignment
-- Real-time attendance dashboard with duration timer
-- Internal messaging system with notification preferences
-- Reports and analytics with charts
-- Dark/light theme support
-- Mobile-responsive design
+- **Time Attendance**: GPS-validated check-in/out with geo-fence enforcement, shift management, real-time tracking
+- **Equipment Booking**: AV equipment management for court sessions, case-based booking with PDF upload, state-machine workflow
+- **Fleet Management**: Vehicle tracking, trip scheduling with approval workflow, parking space management
+- **Dynamic Module Access**: Per-user, per-module role and permission control
+- **Role-based access control** (Admin, Supervisor, User) with module-specific roles
+- **Mobile-first design** with responsive layouts and bottom navigation
+- **Dark/light theme support**
 
 ---
 
@@ -66,7 +65,7 @@ AttendTrack is a GPS-verified time and attendance management system. Employees c
 ## Architecture
 
 ```
-attendance/
+mahakama-access/
 ├── .github/
 │   └── workflows/
 │       └── release.yml         # CI/CD: test → build → release
@@ -77,21 +76,41 @@ attendance/
 │   │   └── leaflet.css         # Bundled Leaflet CSS (no CDN dependency)
 │   ├── src/
 │   │   ├── components/         # Reusable UI components
-│   │   │   └── ErrorBoundary.jsx  # Top-level error handler
+│   │   │   ├── ErrorBoundary.jsx  # Top-level error handler
+│   │   │   └── ModuleAccessManager.jsx  # Module access management UI
 │   │   ├── contexts/           # Auth, Theme, Config providers
 │   │   ├── hooks/              # Custom React hooks
+│   │   ├── layouts/            # MainLayout with module-aware sidebar
 │   │   ├── lib/                # Axios API client, utilities
-│   │   ├── pages/              # Route-level page components
-│   │   └── utils/              # Helper functions
+│   │   ├── pages/
+│   │   │   ├── attendance/     # Time Attendance module pages
+│   │   │   ├── equipment/      # Equipment Booking module pages
+│   │   │   ├── fleet/          # Fleet Management module pages
+│   │   │   ├── admin/          # Admin pages (grouped by module)
+│   │   │   └── shared/         # Login, Profile, Landing, etc.
+│   │   └── router/             # AppRouter with module-prefixed routes
 │   ├── .eslintrc.json          # Client ESLint config
 │   └── vite.config.js          # Dev server (port 5173) + API proxy
 ├── server/                     # Express backend
 │   ├── src/
-│   │   ├── config.js           # App constants
+│   │   ├── config.js           # App constants + module definitions
 │   │   ├── db.js               # MongoDB connection + seeding
-│   │   ├── index.js            # Express app setup + static serving
-│   │   ├── middleware/          # Auth, validation
-│   │   ├── routes/             # API route handlers
+│   │   ├── index.js            # Express app setup + route mounting
+│   │   ├── middleware/          # Auth (module-aware), validation
+│   │   ├── routes/             # API routes per module
+│   │   │   ├── auth.js         # Authentication
+│   │   │   ├── users.js        # User management + module access
+│   │   │   ├── records.js      # Attendance records
+│   │   │   ├── stations.js     # Geo-fence stations
+│   │   │   ├── shifts.js       # Shift management
+│   │   │   ├── messages.js     # Internal messaging
+│   │   │   ├── equipment.js    # Equipment CRUD
+│   │   │   ├── cases.js        # Case management
+│   │   │   ├── bookings.js     # Equipment bookings
+│   │   │   ├── bookers.js      # Designated bookers
+│   │   │   ├── vehicles.js     # Fleet vehicles
+│   │   │   ├── trips.js        # Trip management
+│   │   │   └── parking.js      # Parking spaces
 │   │   └── utils/
 │   │       ├── geo.js          # Haversine distance calculation
 │   │       └── mail.js         # Email sending (nodemailer)
@@ -99,10 +118,10 @@ attendance/
 │   └── .env                    # Environment variables (not tracked)
 ├── CHANGELOG.md                # Version history
 ├── deploy.sh                   # Production deploy script
-├── ecosystem.config.js         # pm2 config (configurable via APP_DIR)
+├── ecosystem.config.js         # pm2 config
 ├── VERSION                     # Single source of truth for version
-├── package.json                # Root workspace config + version scripts
-├── Procfile                    # Deployment entry point (pm2-runtime)
+├── package.json                # Root workspace config
+├── Procfile                    # Deployment entry point
 ├── .env.example                # Environment variable template
 └── README.md                   # This file
 ```
@@ -117,14 +136,61 @@ attendance/
 
 ## Features
 
+### Module System
+
+| Feature | Description |
+|---------|-------------|
+| Dynamic Module Access | Per-user, per-module enabled flag, role, and permissions |
+| Module-Aware JWT | JWT tokens include moduleAccess claims |
+| Module Middleware | `authorizeModule()`, `hasModuleAccess()`, `hasPermission()` helpers |
+| Base Admin Bypass | `role: 'admin'` grants access to all modules automatically |
+| Module-Specific Roles | Each module has its own role hierarchy (admin, manager, user) |
+
+### Time Attendance Module
+
+| Feature | Description |
+|---------|-------------|
+| GPS-validated Check-in/out | Dual validation: distance <= station radius AND accuracy <= 50m |
+| Geo-fence Stations | Configurable radius (10-1000m) with interactive map picker |
+| Shift Management | Create templates, assign to users, day-of-week configuration |
+| Real-time Dashboard | Duration timer, weekly summary, attendance status |
+| Team View | Supervisor can view team attendance with filtering |
+| Reports & Analytics | Date range filtering, charts (pie, bar), summary statistics |
+| Internal Messaging | Compose, inbox/sent, read/unread, notification preferences |
+| Bulk User Import | CSV upload with validation and row-level error reporting |
+
+### Equipment Booking Module
+
+| Feature | Description |
+|---------|-------------|
+| Equipment Inventory | CRUD for AV equipment with categories (evidence-display, virtual-court, event-facilitation) |
+| CSV Import | Bulk equipment import via CSV upload |
+| Case Management | Searchable case database with inline creation |
+| Booking Workflow | State machine: pending → approved → dispatched → in-use → returned |
+| Double-Booking Prevention | Equipment cannot be booked for overlapping dates |
+| PDF Upload | Attach request documents to bookings |
+| Designated Bookers | Admin-managed list of users who can book equipment |
+| Equipment Status Sync | Status auto-updates based on booking state |
+
+### Fleet Management Module
+
+| Feature | Description |
+|---------|-------------|
+| Vehicle Management | CRUD for fleet vehicles with categories (sedan, SUV, van, truck, bus) |
+| Trip Scheduling | Create trips with destination, purpose, dates, passengers |
+| Trip Workflow | State machine: pending → approved → in-progress → completed |
+| Vehicle Double-Booking | Prevents overlapping trip assignments |
+| Parking Management | Parking spaces per station with zones and types |
+| Vehicle Status Sync | Status auto-updates based on trip state (available, booked, in-use) |
+
 ### Authentication & Session Management
 
 | Feature | Description |
 |---------|-------------|
 | Email/Password Login | Credentials validated against bcrypt-hashed passwords |
-| JWT Tokens | Signed with `JWT_SECRET`, 1-hour expiry, type-prefixed (`auth` vs `reset`) |
-| Token Versioning | `tokenVersion` field on users; incremented on password/role change to revoke old tokens |
-| Password Reset | Secure token-based flow with 1-hour expiry; prevents email enumeration |
+| JWT Tokens | Signed with `JWT_SECRET`, 1-hour expiry, type-prefixed |
+| Token Versioning | Incremented on password/role change to revoke old tokens |
+| Password Reset | Secure token-based flow with 1-hour expiry |
 | Password Complexity | Min 8 chars, requires uppercase, lowercase, digit, and special character |
 | Auto-Logout | Client detects 401 responses, clears token, redirects to `/login` |
 
@@ -132,109 +198,39 @@ attendance/
 
 | Role | Permissions |
 |------|-------------|
-| **Admin** | Full access: manage users, stations, shifts, departments, job titles. Change roles, activate/deactivate users. |
-| **Supervisor** | View team attendance, create/edit shifts, message team members. Scoped to assigned team only. |
+| **Admin** | Full access to all modules. Manage users, stations, shifts, departments, job titles. |
+| **Supervisor** | View team attendance, create/edit shifts, message team members. |
 | **User** | Check in/out, view own attendance, view own profile, send messages. |
 
-### GPS & Geo-Fencing
+**Module-Specific Roles:**
 
-| Feature | Description |
-|---------|-------------|
-| GPS Acquisition | Uses `navigator.geolocation` with high accuracy, 15s timeout |
-| Dual Validation | Check-in/out requires: (1) distance <= station radius, AND (2) GPS accuracy <= 50m |
-| Haversine Distance | Calculates distance between user GPS and station center |
-| Configurable Radius | Each station has `radiusMeters` (min 10m, max 1000m) |
-| Location Preview | Map preview before confirming check-in/out |
-| Attendance Map | Leaflet map showing check-in (green) and check-out (brown) markers |
-| Location Picker | Interactive map for admins to place stations with search and "Use Current Location" |
+| Module | Roles |
+|--------|-------|
+| Attendance | admin, supervisor, user |
+| Equipment | admin, booker, user |
+| Fleet | admin, manager, user |
 
-### Attendance Tracking
+### Admin Section (Grouped by Module)
 
-| Feature | Description |
-|---------|-------------|
-| Check-In | Requires GPS within geo-fence; creates attendance record |
-| Check-Out | Requires GPS within geo-fence; calculates total hours |
-| One Record Per Day | Server enforces single check-in and single check-out per user per day |
-| Event Log | Each record stores timestamped events with full GPS data |
-| Automatic Status | Calculated at check-out: present, absent, late, half-day (<4hrs), overtime (>8hrs) |
-| Shift-Aware | Lateness determined against assigned shift start time |
-| Duration Timer | Real-time HH:MM:SS counter on dashboard while checked in |
-| Weekly Summary | Dashboard card showing weekly attendance breakdown |
-
-### Shift Management
-
-| Feature | Description |
-|---------|-------------|
-| Shift Templates | Create shifts with name, start/end time, applicable days (Sun-Sat) |
-| Shift Assignment | Assign shifts to users; one shift per user enforced |
-| Assignment Count | View how many users are assigned to each shift |
-| Duplicate Prevention | Cannot create duplicate shift names or delete shifts with assignments |
-| Day-of-Week Config | Toggle individual days for each shift |
-
-### Messaging & Notifications
-
-**Internal Messaging:**
-- Compose messages to users (supervisors restricted to team)
-- Three types: message, alert, notification
-- Inbox/Sent folders with unread count badge
-- Mark as read (individual and bulk)
-- Delete messages (sender or receiver)
-
-**Notification Preferences:**
-- Toggle 6 notification types: late check-in/out alerts, overtime, shift reminder, shift change/assignment
-- Mute all notifications (1 hour to 1 week)
-
-**System-Generated Alerts:**
-- Late check-in/out detection
-- Overtime detection (>8 hours)
-- Shift reminders (sent on login)
-- Shift change/assignment notifications
-
-### Reports & Analytics
-
-- Date range filtering (default: last 7 days)
-- Employee filtering
-- Charts: attendance status pie chart, daily hours bar chart, employee hours comparison
-- Summary statistics: total records, total hours, average hours, attendance rate
-- Recent records table with date, employee, times, hours, status
-
-### User Management (Admin)
-
-- Full CRUD for users
-- Bulk CSV import (up to 500 users) with validation and row-level error reporting
-- CSV template download
-- Search by name, employee ID, or email; filter by role
-- Duplicate detection (employee ID and email)
-
-### Station Management (Admin)
-
-- CRUD for geo-fence stations
-- Fields: name, latitude, longitude, radiusMeters
-- Interactive map picker with address search (Nominatim geocoding)
-- "Use Current Location" button
-- Mini-map preview on station cards
-
-### Department & Job Title Management (Admin)
-
-- CRUD for departments and job titles
-- Uniqueness enforcement; cannot delete items assigned to users
-
-### Profile Management
-
-- View profile with initials avatar, name, email, role badge
-- Edit name, email, department, job title
-- Change password with current/new/confirm fields
+| Group | Pages |
+|-------|-------|
+| **Attendance** | User Management, Court Stations, Shift Templates, Departments, Job Titles |
+| **Equipment** | Equipment Items, Designated Bookers |
+| **Fleet** | Vehicles, Parking Spaces |
 
 ### UI/UX
 
-- Dark/light theme with localStorage persistence and system preference detection
-- Responsive design with mobile sidebar
-- Toast notifications (success/error/warning)
-- Form validation (Zod schemas)
-- Custom SearchableSelect component
-- Framer Motion animations
-- Kente/Ghanaian brand colors (Green #009A44, Gold #8A704C)
-- Custom 404 page
+| Feature | Description |
+|---------|-------------|
+| Dark/Light Theme | localStorage persistence and system preference detection |
+| Mobile-First Design | Bottom navigation bar, 44px touch targets, safe-area support |
+| Module-Aware Sidebar | Collapsible sections per module, auto-expand active route |
+| Landing Page | 3 module cards with hover effects and feature lists |
+| Responsive Layout | Desktop sidebar + mobile bottom nav |
+| Toast Notifications | Success/error/warning feedback |
+| Form Validation | Zod schemas |
+| Framer Motion Animations | Page transitions, card hover effects |
+| Kente Brand Colors | Green #009A44, Gold #8A704C, Emerald for Fleet |
 
 ---
 
@@ -334,6 +330,8 @@ attendance/
 | POST | `/api/users/bulk` | Admin | Bulk import users (up to 500) |
 | PUT | `/api/users/:id` | Yes* | Update user (*admins can update any; others only self) |
 | DELETE | `/api/users/:id` | Admin | Soft-delete user |
+| PUT | `/api/users/:id/module-access` | Admin | Update user's module access |
+| PUT | `/api/users/:id/module-access/bulk` | Admin | Bulk update module access |
 
 ### Record Endpoints
 
@@ -378,6 +376,79 @@ attendance/
 | PUT | `/api/messages/:id/read` | Yes | Mark one as read |
 | DELETE | `/api/messages/:id` | Yes | Delete message (sender/receiver only) |
 
+### Equipment Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/equipment` | Yes | List equipment (with search, filter) |
+| GET | `/api/equipment/available` | Yes | List available equipment |
+| GET | `/api/equipment/:id` | Yes | Get equipment by ID |
+| POST | `/api/equipment` | Equipment Admin | Create equipment |
+| POST | `/api/equipment/csv` | Equipment Admin | Bulk import via CSV |
+| PUT | `/api/equipment/:id` | Equipment Admin | Update equipment |
+| DELETE | `/api/equipment/:id` | Equipment Admin | Delete equipment |
+
+### Case Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/cases` | Yes | List cases (with search) |
+| GET | `/api/cases/:id` | Yes | Get case by ID |
+| POST | `/api/cases` | Yes | Create case |
+| PUT | `/api/cases/:id` | Yes | Update case |
+| DELETE | `/api/cases/:id` | Yes | Delete case |
+
+### Booking Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/bookings` | Yes | List bookings (with filter) |
+| GET | `/api/bookings/:id` | Yes | Get booking by ID |
+| POST | `/api/bookings` | Bookers | Create booking |
+| POST | `/api/bookings/:id/pdf` | Bookers | Upload PDF for booking |
+| PUT | `/api/bookings/:id/status` | Bookers/Admin | Update booking status |
+
+### Booker Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/bookers` | Equipment Admin | List designated bookers |
+| GET | `/api/bookers/check` | Yes | Check if current user is a booker |
+| POST | `/api/bookers` | Equipment Admin | Add designated booker |
+| DELETE | `/api/bookers/:userId` | Equipment Admin | Remove designated booker |
+
+### Vehicle Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/vehicles` | Yes | List vehicles (with search, filter) |
+| GET | `/api/vehicles/available` | Yes | List available vehicles |
+| GET | `/api/vehicles/:id` | Yes | Get vehicle by ID |
+| POST | `/api/vehicles` | Fleet Admin | Create vehicle |
+| PUT | `/api/vehicles/:id` | Fleet Admin | Update vehicle |
+| DELETE | `/api/vehicles/:id` | Fleet Admin | Delete vehicle |
+
+### Trip Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/trips` | Yes | List trips (with filter) |
+| GET | `/api/trips/:id` | Yes | Get trip by ID |
+| POST | `/api/trips` | Fleet Users | Create trip |
+| PUT | `/api/trips/:id/status` | Fleet Admin/Manager | Update trip status |
+
+### Parking Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/parking` | Yes | List parking spaces (with search, filter) |
+| GET | `/api/parking/available` | Yes | List available parking spaces |
+| GET | `/api/parking/stats` | Yes | Get parking statistics |
+| GET | `/api/parking/:id` | Yes | Get parking space by ID |
+| POST | `/api/parking` | Fleet Admin | Create parking space |
+| PUT | `/api/parking/:id` | Fleet Admin | Update parking space |
+| DELETE | `/api/parking/:id` | Fleet Admin | Delete parking space |
+
 ### Other Endpoints
 
 | Method | Endpoint | Auth | Description |
@@ -397,7 +468,7 @@ attendance/
 | GET | `/api/health` | No | Health check |
 | GET | `/api/version` | No | Get app version |
 
-**Total: 48 API endpoints**
+**Total: 78 API endpoints**
 
 ---
 
@@ -419,6 +490,7 @@ attendance/
 | supervisorId | String | Assigned supervisor's user ID |
 | isActive | Boolean | Account active flag |
 | tokenVersion | Number | Incremented to revoke tokens |
+| moduleAccess | Object | Per-module access: `{ attendance, equipment, fleet }` |
 | createdAt | Date | Creation timestamp |
 | updatedAt | Date | Last update timestamp |
 
@@ -534,6 +606,109 @@ attendance/
 
 **Indexes:** userId (unique)
 
+### `equipment`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| name | String | Equipment name |
+| category | String | `evidence-display`, `virtual-court`, `event-facilitation` |
+| serialNumber | String | Serial number |
+| description | String | Description |
+| status | String | `available`, `booked`, `in-use`, `maintenance` |
+| createdAt | Date | Creation timestamp |
+| updatedAt | Date | Last update timestamp |
+
+**Indexes:** category, status
+
+### `cases`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| caseNumber | String | Unique case number |
+| title | String | Case title |
+| description | String | Case description |
+| court | String | Court name |
+| judge | String | Judge name |
+| createdAt | Date | Creation timestamp |
+| updatedAt | Date | Last update timestamp |
+
+**Indexes:** caseNumber (unique), title
+
+### `bookings`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| bookingId | String | Unique booking ID |
+| caseId | String | Associated case ID |
+| userId | String | User who created the booking |
+| equipmentIds | Array | Array of equipment IDs |
+| startDate | Date | Booking start date |
+| endDate | Date | Booking end date |
+| status | String | `pending`, `approved`, `dispatched`, `in-use`, `returned`, `rejected` |
+| pdfPath | String | Path to uploaded PDF |
+| history | Array | Status change history |
+| createdAt | Date | Creation timestamp |
+| updatedAt | Date | Last update timestamp |
+
+**Indexes:** bookingId (unique), userId, status, caseId
+
+### `vehicles`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| name | String | Vehicle name |
+| plateNumber | String | Unique plate number |
+| category | String | `sedan`, `suv`, `van`, `truck`, `bus` |
+| capacity | Number | Passenger capacity |
+| description | String | Description |
+| status | String | `available`, `booked`, `in-use`, `maintenance` |
+| mileage | Number | Current mileage |
+| createdAt | Date | Creation timestamp |
+| updatedAt | Date | Last update timestamp |
+
+**Indexes:** plateNumber (unique), status, category
+
+### `trips`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| tripId | String | Unique trip ID |
+| vehicleId | String | Assigned vehicle ID |
+| userId | String | User who requested the trip |
+| driverId | String | Assigned driver ID |
+| destination | String | Trip destination |
+| purpose | String | Trip purpose |
+| departureDate | Date | Scheduled departure |
+| returnDate | Date | Scheduled return |
+| passengers | Number | Number of passengers |
+| status | String | `pending`, `approved`, `in-progress`, `completed`, `rejected` |
+| history | Array | Status change history |
+| createdAt | Date | Creation timestamp |
+| updatedAt | Date | Last update timestamp |
+
+**Indexes:** tripId (unique), vehicleId, userId, status
+
+### `parking_spaces`
+
+| Field | Type | Description |
+|-------|------|-------------|
+| _id | ObjectId | Primary key |
+| name | String | Space name |
+| zone | String | Parking zone |
+| stationId | String | Station ID |
+| type | String | `standard`, `handicap`, `reserved`, `ev` |
+| description | String | Description |
+| status | String | `available`, `occupied`, `reserved` |
+| createdAt | Date | Creation timestamp |
+| updatedAt | Date | Last update timestamp |
+
+**Indexes:** stationId, status
+
 ---
 
 ## Environment Variables
@@ -541,7 +716,7 @@ attendance/
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `MONGODB_URI` | Yes | `mongodb://localhost:27017` | MongoDB connection string |
-| `MONGODB_DB` | No | `attendtrack` | Database name |
+| `MONGODB_DB` | No | `mahakama_access` | Database name |
 | `JWT_SECRET` | Yes | — | Secret key for JWT signing (64-char hex recommended) |
 | `JWT_EXPIRES_IN` | No | `1h` | Token expiry duration |
 | `PORT` | No | `3000` | Server port |
@@ -556,7 +731,7 @@ attendance/
 | `SMTP_PORT` | No | `587` | Email SMTP port |
 | `SMTP_USER` | No | — | Email SMTP username |
 | `SMTP_PASS` | No | — | Email SMTP password |
-| `EMAIL_FROM` | No | `noreply@attendtrack.com` | Sender email address |
+| `EMAIL_FROM` | No | `noreply@mahakama-access.com` | Sender email address |
 
 ---
 

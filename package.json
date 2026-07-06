@@ -1,7 +1,7 @@
 {
   "name": "attendtrack",
   "version": "1.0.0",
-  "description": "GPS-Verified Time & Attendance System",
+  "description": "Secure, Accessible and Available Services",
   "private": true,
   "workspaces": [
     "client",
@@ -34,7 +34,8 @@
     "deploy:force": "./deploy.sh --force"
   },
   "dependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "lucide-react": "^1.23.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.7.0",

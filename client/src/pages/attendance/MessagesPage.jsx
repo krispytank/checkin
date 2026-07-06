@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { messagesAPI, usersAPI, notificationsAPI } from '../lib/api.js';
-import { useAuth } from '../contexts/AuthContext.jsx';
-import { formatDateTime, cn } from '../lib/utils.js';
+import { messagesAPI, usersAPI, notificationsAPI } from '../../lib/api.js';
+import { useAuth } from '../../contexts/AuthContext.jsx';
+import { formatDateTime, cn } from '../../lib/utils.js';
 import { 
   Mail, Send, Inbox, Trash2, Eye, EyeOff, Loader2, 
   AlertCircle, Bell, MessageSquare, Plus, X, Settings 
 } from 'lucide-react';
-import NotificationSettings from '../components/NotificationSettings.jsx';
+import NotificationSettings from '../../components/NotificationSettings.jsx';
 
 export default function MessagesPage() {
   const { user } = useAuth();

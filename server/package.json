@@ -2,7 +2,7 @@
   "name": "server",
   "version": "1.0.0",
   "private": true,
-  "description": "AttendTrack Backend API Server",
+  "description": "Mahakama Access Backend API Server",
   "license": "ISC",
   "type": "module",
   "main": "src/index.js",

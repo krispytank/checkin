@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ============================================
-# AttendTrack Production Deploy Script
+# Mahakama Access Production Deploy Script
 # ============================================
 # Usage:
 #   ./deploy.sh              Check for updates and deploy if newer version found
@@ -212,7 +212,7 @@ show_status() {
 
   echo ""
   echo "================================="
-  echo "  AttendTrack Deploy Status"
+  echo "  Mahakama Access Deploy Status"
   echo "================================="
   echo "  Current version:  v$current_version"
 

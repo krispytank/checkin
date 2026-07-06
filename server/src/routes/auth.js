@@ -52,7 +52,7 @@ router.post('/login', async (req, res, next) => {
     }
 
     // Generate token
-    const token = generateToken(user._id.toString(), user.role, 'auth', user.tokenVersion || 0);
+    const token = generateToken(user, 'auth');
 
     // Return user data without password
     const { password: _, ...userData } = user;
@@ -267,7 +267,7 @@ router.post('/forgot-password', async (req, res, next) => {
     }
 
     // Generate reset token
-    const resetToken = generateToken(user._id.toString(), user.role, 'reset');
+    const resetToken = generateToken(user, 'reset');
     const resetExpires = new Date(Date.now() + 3600000); // 1 hour
 
     // Store reset token

@@ -3,17 +3,29 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import MainLayout from '../layouts/MainLayout.jsx';
 import LoginPage from '../pages/LoginPage.jsx';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage.jsx';
-import DashboardPage from '../pages/DashboardPage.jsx';
-import TeamPage from '../pages/TeamPage.jsx';
-import ReportsPage from '../pages/ReportsPage.jsx';
-import ShiftsPage from '../pages/ShiftsPage.jsx';
-import MessagesPage from '../pages/MessagesPage.jsx';
+import LandingPage from '../pages/LandingPage.jsx';
+import DashboardPage from '../pages/attendance/DashboardPage.jsx';
+import TeamPage from '../pages/attendance/TeamPage.jsx';
+import ReportsPage from '../pages/attendance/ReportsPage.jsx';
+import ShiftsPage from '../pages/attendance/ShiftsPage.jsx';
+import MessagesPage from '../pages/attendance/MessagesPage.jsx';
 import ProfilePage from '../pages/ProfilePage.jsx';
 import AdminUsersPage from '../pages/admin/AdminUsersPage.jsx';
 import AdminStationsPage from '../pages/admin/AdminStationsPage.jsx';
 import AdminShiftsPage from '../pages/admin/AdminShiftsPage.jsx';
 import AdminDepartmentsPage from '../pages/admin/AdminDepartmentsPage.jsx';
 import AdminJobTitlesPage from '../pages/admin/AdminJobTitlesPage.jsx';
+import AdminEquipmentItemsPage from '../pages/admin/AdminEquipmentItemsPage.jsx';
+import AdminBookersPage from '../pages/admin/AdminBookersPage.jsx';
+import AdminFleetVehiclesPage from '../pages/admin/AdminFleetVehiclesPage.jsx';
+import AdminFleetParkingPage from '../pages/admin/AdminFleetParkingPage.jsx';
+import EquipmentDashboardPage from '../pages/equipment/EquipmentDashboardPage.jsx';
+import BookEquipmentPage from '../pages/equipment/BookEquipmentPage.jsx';
+import ManageBookingsPage from '../pages/equipment/ManageBookingsPage.jsx';
+import FleetDashboardPage from '../pages/fleet/FleetDashboardPage.jsx';
+import VehiclesPage from '../pages/fleet/VehiclesPage.jsx';
+import TripsPage from '../pages/fleet/TripsPage.jsx';
+import ParkingPage from '../pages/fleet/ParkingPage.jsx';
 import NotFoundPage from '../pages/NotFoundPage.jsx';
 
 function ProtectedRoute({ children, requiredRoles = [] }) {
@@ -32,7 +44,7 @@ function ProtectedRoute({ children, requiredRoles = [] }) {
   }
 
   if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
-    return <Redirect to="/dashboard" />;
+    return <Redirect to="/" />;
   }
 
   return children;
@@ -50,7 +62,7 @@ function PublicRoute({ children }) {
   }
 
   if (isAuthenticated) {
-    return <Redirect to="/dashboard" />;
+    return <Redirect to="/" />;
   }
 
   return children;
@@ -72,45 +84,105 @@ export default function AppRouter() {
       </Route>
 
       {/* Protected Routes */}
-      <Route path="/dashboard">
+      <Route path="/">
         <ProtectedRoute>
-          <MainLayout>
-            <DashboardPage />
-          </MainLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/team">
-        <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
-          <MainLayout>
-            <TeamPage />
-          </MainLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/reports">
-        <ProtectedRoute>
-          <MainLayout>
-            <ReportsPage />
-          </MainLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/shifts">
-        <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
-          <MainLayout>
-            <ShiftsPage />
-          </MainLayout>
-        </ProtectedRoute>
-      </Route>
-      <Route path="/messages">
-        <ProtectedRoute>
-          <MainLayout>
-            <MessagesPage />
-          </MainLayout>
+          <LandingPage />
         </ProtectedRoute>
       </Route>
       <Route path="/profile">
         <ProtectedRoute>
           <MainLayout>
             <ProfilePage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Time Attendance Module */}
+      <Route path="/attendance/dashboard">
+        <ProtectedRoute>
+          <MainLayout module="attendance">
+            <DashboardPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/attendance/team">
+        <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
+          <MainLayout module="attendance">
+            <TeamPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/attendance/reports">
+        <ProtectedRoute>
+          <MainLayout module="attendance">
+            <ReportsPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/attendance/shifts">
+        <ProtectedRoute requiredRoles={['admin', 'supervisor']}>
+          <MainLayout module="attendance">
+            <ShiftsPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/attendance/messages">
+        <ProtectedRoute>
+          <MainLayout module="attendance">
+            <MessagesPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Equipment Booking Module */}
+      <Route path="/equipment/dashboard">
+        <ProtectedRoute>
+          <MainLayout module="equipment">
+            <EquipmentDashboardPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/equipment/book">
+        <ProtectedRoute>
+          <MainLayout module="equipment">
+            <BookEquipmentPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/equipment/manage">
+        <ProtectedRoute>
+          <MainLayout module="equipment">
+            <ManageBookingsPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Fleet Management Module */}
+      <Route path="/fleet/dashboard">
+        <ProtectedRoute>
+          <MainLayout module="fleet">
+            <FleetDashboardPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/fleet/vehicles">
+        <ProtectedRoute>
+          <MainLayout module="fleet">
+            <VehiclesPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/fleet/trips">
+        <ProtectedRoute>
+          <MainLayout module="fleet">
+            <TripsPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/fleet/parking">
+        <ProtectedRoute>
+          <MainLayout module="fleet">
+            <ParkingPage />
           </MainLayout>
         </ProtectedRoute>
       </Route>
@@ -152,9 +224,41 @@ export default function AppRouter() {
         </ProtectedRoute>
       </Route>
 
+      {/* Equipment Admin Routes */}
+      <Route path="/admin/equipment/items">
+        <ProtectedRoute requiredRoles={['admin']}>
+          <MainLayout>
+            <AdminEquipmentItemsPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/equipment/bookers">
+        <ProtectedRoute requiredRoles={['admin']}>
+          <MainLayout>
+            <AdminBookersPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Fleet Admin Routes */}
+      <Route path="/admin/fleet/vehicles">
+        <ProtectedRoute requiredRoles={['admin']}>
+          <MainLayout>
+            <AdminFleetVehiclesPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/admin/fleet/parking">
+        <ProtectedRoute requiredRoles={['admin']}>
+          <MainLayout>
+            <AdminFleetParkingPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+
       {/* Default redirect */}
       <Route path="/">
-        <Redirect to="/dashboard" />
+        <Redirect to="/" />
       </Route>
 
       {/* 404 */}

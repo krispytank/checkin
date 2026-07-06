@@ -259,7 +259,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
+    // Create user with default module access
     const newUser = {
       employeeId,
       name: name.trim(),
@@ -272,6 +272,26 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
       supervisorId: supervisorId || null,
       isActive: true,
       tokenVersion: 0,
+      // Default module access - attendance enabled for all users
+      moduleAccess: {
+        attendance: {
+          enabled: true,
+          role: role === 'admin' ? 'admin' : role === 'supervisor' ? 'supervisor' : 'user',
+          permissions: role === 'admin' ? ['*'] : 
+                      role === 'supervisor' ? ['check_in_out', 'view_own_records', 'view_team_records', 'manage_shifts', 'view_reports', 'send_messages'] :
+                      ['check_in_out', 'view_own_records', 'send_messages'],
+        },
+        equipment: {
+          enabled: false,
+          role: 'user',
+          permissions: [],
+        },
+        fleet: {
+          enabled: false,
+          role: 'user',
+          permissions: [],
+        },
+      },
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -421,6 +441,126 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res, next) =
     );
 
     res.json({ success: true, message: 'User deactivated successfully' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/users/:id/module-access
+router.put('/:id/module-access', authenticate, authorize('admin'), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { module, enabled, role, permissions } = req.body;
+
+    // Validate module
+    const validModules = ['attendance', 'equipment', 'fleet'];
+    if (!validModules.includes(module)) {
+      return res.status(400).json({ success: false, message: 'Invalid module' });
+    }
+
+    const db = getDB();
+
+    let user;
+    try {
+      user = await db.collection('users').findOne({ _id: new ObjectId(id) });
+    } catch (e) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Validate module role
+    const validModuleRoles = {
+      attendance: ['admin', 'supervisor', 'user'],
+      equipment: ['admin', 'booker', 'user'],
+      fleet: ['admin', 'manager', 'driver', 'user'],
+    };
+
+    if (role && !validModuleRoles[module].includes(role)) {
+      return res.status(400).json({ success: false, message: `Invalid role for ${module} module` });
+    }
+
+    // Build update data
+    const updateData = {};
+    updateData[`moduleAccess.${module}.enabled`] = enabled;
+    if (role) updateData[`moduleAccess.${module}.role`] = role;
+    if (permissions) updateData[`moduleAccess.${module}.permissions`] = permissions;
+
+    // Update user and increment tokenVersion to refresh JWT
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { ...updateData, updatedAt: new Date() }, $inc: { tokenVersion: 1 } }
+    );
+
+    const updatedUser = await db.collection('users').findOne(
+      { _id: new ObjectId(id) },
+      { projection: { password: 0 } }
+    );
+
+    res.json({ success: true, data: updatedUser });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PUT /api/users/:id/module-access/bulk
+router.put('/:id/module-access/bulk', authenticate, authorize('admin'), async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { moduleAccess } = req.body;
+
+    // Validate moduleAccess structure
+    const validModules = ['attendance', 'equipment', 'fleet'];
+    const validModuleRoles = {
+      attendance: ['admin', 'supervisor', 'user'],
+      equipment: ['admin', 'booker', 'user'],
+      fleet: ['admin', 'manager', 'driver', 'user'],
+    };
+
+    for (const [module, access] of Object.entries(moduleAccess)) {
+      if (!validModules.includes(module)) {
+        return res.status(400).json({ success: false, message: `Invalid module: ${module}` });
+      }
+      if (access.role && !validModuleRoles[module].includes(access.role)) {
+        return res.status(400).json({ success: false, message: `Invalid role for ${module} module` });
+      }
+    }
+
+    const db = getDB();
+
+    let user;
+    try {
+      user = await db.collection('users').findOne({ _id: new ObjectId(id) });
+    } catch (e) {
+      return res.status(400).json({ success: false, message: 'Invalid user ID' });
+    }
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Build update data
+    const updateData = {};
+    for (const [module, access] of Object.entries(moduleAccess)) {
+      updateData[`moduleAccess.${module}.enabled`] = access.enabled;
+      if (access.role) updateData[`moduleAccess.${module}.role`] = access.role;
+      if (access.permissions) updateData[`moduleAccess.${module}.permissions`] = access.permissions;
+    }
+
+    // Update user and increment tokenVersion to refresh JWT
+    await db.collection('users').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { ...updateData, updatedAt: new Date() }, $inc: { tokenVersion: 1 } }
+    );
+
+    const updatedUser = await db.collection('users').findOne(
+      { _id: new ObjectId(id) },
+      { projection: { password: 0 } }
+    );
+
+    res.json({ success: true, data: updatedUser });
   } catch (error) {
     next(error);
   }

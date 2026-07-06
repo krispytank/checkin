@@ -71,6 +71,43 @@ export function AuthProvider({ children }) {
     return roles.includes(user.role);
   };
 
+  // Module-aware helpers
+  const hasModuleAccess = (module) => {
+    if (!user) return false;
+    // Base admin role grants access to all modules
+    if (user.role === 'admin') return true;
+    return user.moduleAccess?.[module]?.enabled === true;
+  };
+
+  const hasModuleRole = (module, ...roles) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    const moduleRole = user.moduleAccess?.[module]?.role;
+    return roles.includes(moduleRole);
+  };
+
+  const hasPermission = (module, permission) => {
+    if (!user) return false;
+    if (user.role === 'admin') return true;
+    const moduleAccess = user.moduleAccess?.[module];
+    if (!moduleAccess?.enabled) return false;
+    if (moduleAccess.role === 'admin') return true;
+    if (moduleAccess.permissions?.includes('*')) return true;
+    return moduleAccess.permissions?.includes(permission) === true;
+  };
+
+  const getModuleRole = (module) => {
+    if (!user) return null;
+    if (user.role === 'admin') return 'admin';
+    return user.moduleAccess?.[module]?.role || null;
+  };
+
+  const getModulePermissions = (module) => {
+    if (!user) return [];
+    if (user.role === 'admin') return ['*'];
+    return user.moduleAccess?.[module]?.permissions || [];
+  };
+
   const value = {
     user: user || null,
     token,
@@ -82,6 +119,11 @@ export function AuthProvider({ children }) {
     forgotPassword,
     resetPassword,
     hasRole,
+    hasModuleAccess,
+    hasModuleRole,
+    hasPermission,
+    getModuleRole,
+    getModulePermissions,
     isLoggingIn: loginMutation.isPending,
     isLoggingOut: logoutMutation.isPending,
     loginError: loginMutation.error,

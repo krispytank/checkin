@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { shiftsAPI, usersAPI } from '../lib/api.js';
-import { cn } from '../lib/utils.js';
+import { shiftsAPI, usersAPI } from '../../lib/api.js';
+import { cn } from '../../lib/utils.js';
 import { Calendar, Plus, Users, Loader2, Edit, Trash2, X } from 'lucide-react';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
