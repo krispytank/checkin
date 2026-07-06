@@ -165,7 +165,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
     );
 
     const newItem = {
-      name: name.trim(),
+      name: name.trim().toUpperCase(),
       serialNumber: serialNumber.trim(),
       type: type.trim(),
       description: description.trim(),
@@ -219,7 +219,7 @@ router.post('/csv', authenticate, authorize('admin'), async (req, res, next) => 
       );
 
       await db.collection('equipment').insertOne({
-        name: row.name.trim(),
+        name: row.name.trim().toUpperCase(),
         serialNumber: row.serialNumber.trim(),
         type: typeVal,
         description: (row.description || '').trim(),
@@ -254,7 +254,7 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res, next) => {
     }
 
     const updateData = { updatedAt: new Date() };
-    if (name) updateData.name = name.trim();
+    if (name) updateData.name = name.trim().toUpperCase();
     if (serialNumber) updateData.serialNumber = serialNumber.trim();
     if (type) {
       updateData.type = type.trim();

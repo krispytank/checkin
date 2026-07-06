@@ -9,6 +9,10 @@ import { sendPasswordResetEmail } from '../utils/mail.js';
 
 const router = Router();
 
+function toTitleCase(str) {
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+}
+
 // POST /api/auth/login
 router.post('/login', async (req, res, next) => {
   try {
@@ -169,7 +173,7 @@ router.post('/register', authenticate, async (req, res, next) => {
     // Create user
     const newUser = {
       employeeId,
-      name: name.trim(),
+      name: toTitleCase(name.trim()),
       email: email.toLowerCase().trim(),
       password: hashedPassword,
       role,

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vehicleAPI } from '../../lib/api.js';
+import UserEmployeeSelect from '../../components/UserEmployeeSelect.jsx';
 import { Plus, Search, Loader2, Car, X, Edit2, Trash2 } from 'lucide-react';
 
 const VEHICLE_CATEGORIES = [
@@ -22,6 +23,7 @@ function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting }) {
   const [formData, setFormData] = useState({
     name: vehicle?.name || '',
     plateNumber: vehicle?.plateNumber || '',
+    employeeNo: vehicle?.employeeNo || '',
     category: vehicle?.category || 'sedan',
     capacity: vehicle?.capacity || 4,
     description: vehicle?.description || '',
@@ -53,6 +55,12 @@ function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting }) {
             onChange={e => setFormData({ ...formData, plateNumber: e.target.value.toUpperCase() })}
             className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
             required
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <UserEmployeeSelect
+            value={formData.employeeNo}
+            onChange={v => setFormData({ ...formData, employeeNo: v })}
           />
         </div>
         <div>
@@ -154,13 +162,13 @@ export default function VehiclesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Vehicles</h1>
-          <p className="text-muted-foreground">Manage fleet vehicles</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Vehicles</h1>
+          <p className="text-muted-foreground text-sm">Manage fleet vehicles</p>
         </div>
         <button onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+          className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
           <Plus className="h-4 w-4" /> Add Vehicle
         </button>
       </div>
@@ -180,7 +188,7 @@ export default function VehiclesPage() {
       {/* Form Modal */}
       {(showForm || editingVehicle) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-card p-6 shadow-xl">
+          <div className="w-full max-w-lg rounded-xl bg-card p-4 sm:p-6 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">{editingVehicle ? 'Edit Vehicle' : 'Add Vehicle'}</h2>
               <button onClick={() => { setShowForm(false); setEditingVehicle(null); }} className="p-1 rounded hover:bg-muted">

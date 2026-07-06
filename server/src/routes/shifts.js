@@ -105,7 +105,7 @@ router.post('/', authenticate, authorize('admin', 'supervisor'), async (req, res
     const db = getDB();
 
     // Check for duplicate name
-    const existing = await db.collection('shifts').findOne({ name: name.trim() });
+    const existing = await db.collection('shifts').findOne({ name: name.trim().toUpperCase() });
     if (existing) {
       return res.status(409).json({ 
         success: false, 
@@ -115,7 +115,7 @@ router.post('/', authenticate, authorize('admin', 'supervisor'), async (req, res
 
     // Create shift
     const newShift = {
-      name: name.trim(),
+      name: name.trim().toUpperCase(),
       startTime,
       endTime,
       applicableDays,
@@ -157,7 +157,7 @@ router.put('/:id', authenticate, authorize('admin', 'supervisor'), async (req, r
 
     if (name && name !== shift.name) {
       const existing = await db.collection('shifts').findOne({ 
-        name: name.trim(), 
+        name: name.trim().toUpperCase(), 
         _id: { $ne: new ObjectId(id) } 
       });
       if (existing) {
@@ -166,7 +166,7 @@ router.put('/:id', authenticate, authorize('admin', 'supervisor'), async (req, r
           message: 'Shift name already exists' 
         });
       }
-      updateData.name = name.trim();
+      updateData.name = name.trim().toUpperCase();
     }
 
     if (startTime) {

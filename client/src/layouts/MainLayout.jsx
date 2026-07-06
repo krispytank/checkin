@@ -5,7 +5,7 @@ import { useTheme } from '../contexts/ThemeContext.jsx';
 import { 
   Users, FileText, Calendar, MessageSquare,
   User, Settings, LogOut, Menu, X, Sun, Moon, ChevronDown,
-  Shield, Home, Clock, MapPin, Briefcase, Building, Car, Truck, Package, MonitorCog
+  Home, Clock, MapPin, Briefcase, Building, Car, Truck, Package, MonitorCog, QrCode
 } from 'lucide-react';
 import { getInitials, cn } from '../lib/utils.js';
 
@@ -22,6 +22,7 @@ const fleetNavigation = [
   { name: 'Vehicles', href: '/fleet/vehicles', icon: Car },
   { name: 'Trips', href: '/fleet/trips', icon: Truck },
   { name: 'Parking', href: '/fleet/parking', icon: MapPin },
+  { name: 'Check In/Out', href: '/fleet/checkin', icon: QrCode },
 ];
 
 const equipmentNavigation = [
@@ -32,10 +33,16 @@ const equipmentNavigation = [
 
 const adminNavigation = [
   {
+    name: 'Users',
+    icon: Users,
+    children: [
+      { name: 'User Management', href: '/admin/users', icon: Users },
+    ],
+  },
+  {
     name: 'Attendance',
     icon: Clock,
     children: [
-      { name: 'User Management', href: '/admin/users', icon: Users },
       { name: 'Court Stations', href: '/admin/stations', icon: MapPin },
       { name: 'Shift Templates', href: '/admin/shifts', icon: Calendar },
       { name: 'Departments', href: '/admin/departments', icon: Building },
@@ -73,6 +80,7 @@ export default function MainLayout({ children }) {
   const [equipmentOpen, setEquipmentOpen] = useState(false);
   const [fleetOpen, setFleetOpen] = useState(false);
   const [adminMenuOpen, setAdminMenuOpen] = useState(false);
+  const [adminUsersOpen, setAdminUsersOpen] = useState(false);
   const [adminAttendanceOpen, setAdminAttendanceOpen] = useState(false);
   const [adminEquipmentOpen, setAdminEquipmentOpen] = useState(false);
   const [adminFleetOpen, setAdminFleetOpen] = useState(false);
@@ -90,9 +98,10 @@ export default function MainLayout({ children }) {
 
   const isFleetChild = fleetNavigation.some(c => location === c.href);
 
-  const isAdminAttendanceChild = adminNavigation[0].children.some(c => location === c.href);
-  const isAdminEquipmentChild = adminNavigation[1].children.some(c => location === c.href);
-  const isAdminFleetChild = adminNavigation[2].children.some(c => location === c.href);
+  const isAdminUsersChild = adminNavigation[0].children.some(c => location === c.href);
+  const isAdminAttendanceChild = adminNavigation[1].children.some(c => location === c.href);
+  const isAdminEquipmentChild = adminNavigation[2].children.some(c => location === c.href);
+  const isAdminFleetChild = adminNavigation[3].children.some(c => location === c.href);
 
   const filteredAttendance = timeAttendanceChildren.filter(
     c => !c.roles || c.roles.includes(user?.role)
@@ -169,9 +178,7 @@ export default function MainLayout({ children }) {
           {/* Logo */}
           <div className="flex h-16 items-center justify-between px-4 border-b">
             <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Shield className="h-5 w-5" />
-              </div>
+              <img src="/jud-logo.png" alt="Mahakama" className="h-8 w-8 rounded-lg object-contain" />
               <span className="text-xl font-bold">Mahakama Access</span>
             </Link>
             <button
@@ -251,6 +258,49 @@ export default function MainLayout({ children }) {
                 </button>
                 {adminMenuOpen && (
                   <div className="mt-1 space-y-1">
+                    {/* Users Admin Group */}
+                    <button
+                      onClick={() => setAdminUsersOpen(!adminUsersOpen)}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-lg px-3 py-2 pl-11 text-sm font-medium transition-colors",
+                        isAdminUsersChild
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Users className="h-4 w-4" />
+                        Users
+                      </span>
+                      <ChevronDown
+                        className={cn("h-3 w-3 transition-transform", (adminUsersOpen || isAdminUsersChild) && "rotate-180")}
+                      />
+                    </button>
+                    {(adminUsersOpen || isAdminUsersChild) && (
+                      <div className="space-y-1">
+                        {adminNavigation[0].children.map((item) => {
+                          const ChildIcon = item.icon;
+                          const active = location === item.href;
+                          return (
+                            <Link
+                              key={item.name}
+                              href={item.href}
+                              className={cn(
+                                "flex items-center gap-3 rounded-lg px-3 py-2 pl-16 text-sm font-medium transition-colors",
+                                active
+                                  ? "bg-primary text-primary-foreground"
+                                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                              )}
+                              onClick={() => setSidebarOpen(false)}
+                            >
+                              <ChildIcon className="h-4 w-4" />
+                              {item.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+
                     {/* Attendance Admin Group */}
                     <button
                       onClick={() => setAdminAttendanceOpen(!adminAttendanceOpen)}
@@ -271,7 +321,7 @@ export default function MainLayout({ children }) {
                     </button>
                     {(adminAttendanceOpen || isAdminAttendanceChild) && (
                       <div className="space-y-1">
-                        {adminNavigation[0].children.map((item) => {
+                        {adminNavigation[1].children.map((item) => {
                           const ChildIcon = item.icon;
                           const active = location === item.href;
                           return (
@@ -314,7 +364,7 @@ export default function MainLayout({ children }) {
                     </button>
                     {(adminEquipmentOpen || isAdminEquipmentChild) && (
                       <div className="space-y-1">
-                        {adminNavigation[1].children.map((item) => {
+                        {adminNavigation[2].children.map((item) => {
                           const ChildIcon = item.icon;
                           const active = location === item.href;
                           return (
@@ -357,7 +407,7 @@ export default function MainLayout({ children }) {
                     </button>
                     {(adminFleetOpen || isAdminFleetChild) && (
                       <div className="space-y-1">
-                        {adminNavigation[2].children.map((item) => {
+                        {adminNavigation[3].children.map((item) => {
                           const ChildIcon = item.icon;
                           const active = location === item.href;
                           return (
@@ -384,6 +434,11 @@ export default function MainLayout({ children }) {
               </div>
             )}
           </nav>
+
+          {/* Version */}
+          <div className="px-4 py-2 text-xs text-muted-foreground">
+            v1.0.0
+          </div>
 
           {/* User section */}
           <div className="border-t p-4">
@@ -412,10 +467,8 @@ export default function MainLayout({ children }) {
               <Menu className="h-5 w-5" />
             </button>
             <Link href="/" className="lg:hidden flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Shield className="h-4 w-4" />
-              </div>
-              <span className="text-base font-bold">Mahakama Access</span>
+              <img src="/jud-logo.png" alt="Mahakama" className="h-7 w-7 rounded-lg object-contain" />
+              <span className="text-sm sm:text-base font-bold truncate hidden sm:inline">Mahakama Access</span>
             </Link>
           </div>
 

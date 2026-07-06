@@ -2,7 +2,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { Shield, Package, Clock, Car, ArrowRight, LogOut, Sun, Moon } from 'lucide-react';
+import { Package, Clock, Car, ArrowRight, LogOut, Sun, Moon } from 'lucide-react';
 import { getInitials, cn } from '../lib/utils.js';
 
 export default function LandingPage() {
@@ -14,9 +14,7 @@ export default function LandingPage() {
       {/* Top bar */}
       <header className="flex items-center justify-between px-6 py-4 border-b bg-card/50 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Shield className="h-5 w-5" />
-          </div>
+          <img src="/jud-logo.png" alt="Mahakama" className="h-9 w-9 rounded-xl object-contain" />
           <span className="text-lg font-bold tracking-tight">Mahakama Access</span>
         </div>
         <div className="flex items-center gap-3">

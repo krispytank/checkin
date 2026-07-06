@@ -137,6 +137,7 @@ export default function DateTimePopover({ value, onChange, label = 'Select date 
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
+          side="bottom"
           align={align}
           sideOffset={8}
           className="z-50 w-[320px] rounded-2xl border border-border/50 bg-card p-4 shadow-xl animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"

@@ -34,7 +34,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
 
     // Check for duplicate
     const existing = await db.collection('departments').findOne({ 
-      name: name.trim() 
+      name: name.trim().toUpperCase() 
     });
     if (existing) {
       return res.status(409).json({ 
@@ -44,7 +44,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
     }
 
     const newDepartment = {
-      name: name.trim(),
+      name: name.trim().toUpperCase(),
       createdAt: new Date(),
     };
 
@@ -84,7 +84,7 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res, next) => {
 
     // Check for duplicate
     const existing = await db.collection('departments').findOne({ 
-      name: name.trim(), 
+      name: name.trim().toUpperCase(), 
       _id: { $ne: new ObjectId(id) } 
     });
     if (existing) {
@@ -96,7 +96,7 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res, next) => {
 
     await db.collection('departments').updateOne(
       { _id: new ObjectId(id) },
-      { $set: { name: name.trim(), updatedAt: new Date() } }
+      { $set: { name: name.trim().toUpperCase(), updatedAt: new Date() } }
     );
 
     const updatedDepartment = await db.collection('departments').findOne({ 

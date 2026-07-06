@@ -123,6 +123,13 @@ async function createIndexes(database) {
     await database.collection('parking_spaces').createIndex({ stationId: 1 });
     await database.collection('parking_spaces').createIndex({ status: 1 });
 
+    // Vehicle checkins collection indexes
+    await database.collection('vehicle_checkins').createIndex({ vehicleId: 1 });
+    await database.collection('vehicle_checkins').createIndex({ stationId: 1 });
+    await database.collection('vehicle_checkins').createIndex({ timestamp: -1 });
+    await database.collection('vehicle_checkins').createIndex({ type: 1 });
+    await database.collection('vehicle_checkins').createIndex({ vehicleId: 1, stationId: 1, type: 1 });
+
     console.log('Database indexes created successfully');
   } catch (error) {
     // Log warning but don't crash - indexes may already exist
@@ -305,6 +312,52 @@ async function createSchemas(database) {
           properties: {
             name: { bsonType: 'string', description: 'Type name is required' },
             createdAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // Vehicles schema
+    {
+      collection: 'vehicles',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['name', 'plateNumber'],
+          properties: {
+            name: { bsonType: 'string', description: 'Name is required' },
+            plateNumber: { bsonType: 'string', description: 'Plate number is required' },
+            employeeNo: { bsonType: ['string', 'null'] },
+            category: { bsonType: 'string' },
+            capacity: { bsonType: 'int' },
+            description: { bsonType: 'string' },
+            status: { bsonType: 'string' },
+            mileage: { bsonType: 'int' },
+            qrCode: { bsonType: ['string', 'null'] },
+            qrGeneratedYear: { bsonType: ['int', 'null'] },
+            qrStatus: { bsonType: 'string' },
+            deactivatedAt: { bsonType: ['date', 'null'] },
+            createdAt: { bsonType: 'date' },
+            updatedAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // Vehicle checkins schema
+    {
+      collection: 'vehicle_checkins',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['vehicleId', 'plateNumber', 'type', 'timestamp'],
+          properties: {
+            vehicleId: { bsonType: 'string', description: 'Vehicle ID is required' },
+            plateNumber: { bsonType: 'string', description: 'Plate number is required' },
+            stationId: { bsonType: ['string', 'null'] },
+            parkingSpaceId: { bsonType: ['string', 'null'] },
+            type: { enum: ['check-in', 'check-out'], description: 'Must be check-in or check-out' },
+            scannedBy: { bsonType: ['string', 'null'] },
+            notes: { bsonType: ['string', 'null'] },
+            timestamp: { bsonType: 'date' },
           },
         },
       },

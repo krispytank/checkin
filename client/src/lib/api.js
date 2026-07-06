@@ -168,6 +168,13 @@ export const vehicleAPI = {
   create: (data) => api.post('/vehicles', data),
   update: (id, data) => api.put(`/vehicles/${id}`, data),
   delete: (id) => api.delete(`/vehicles/${id}`),
+  getQR: (id) => api.get(`/vehicles/${id}/qr`),
+  generateQR: (id) => api.post(`/vehicles/${id}/qr/generate`),
+  generateYearQR: () => api.post('/vehicles/qr/generate-year'),
+  deactivate: (id) => api.post(`/vehicles/${id}/deactivate`),
+  reactivate: (id) => api.post(`/vehicles/${id}/reactivate`),
+  exportQRPdf: (id) => api.get(`/vehicles/${id}/qr-pdf`, { responseType: 'blob' }),
+  exportQRPdfBatch: (ids) => api.get(`/vehicles/qr-pdf/batch?ids=${ids.join(',')}`, { responseType: 'blob' }),
 };
 
 export const tripsAPI = {
@@ -185,6 +192,13 @@ export const parkingAPI = {
   create: (data) => api.post('/parking', data),
   update: (id, data) => api.put(`/parking/${id}`, data),
   delete: (id) => api.delete(`/parking/${id}`),
+};
+
+export const checkinsAPI = {
+  create: (data) => api.post('/checkins', data),
+  list: (params) => api.get('/checkins', { params }),
+  getActive: () => api.get('/checkins/active'),
+  getVehicleStatus: (vehicleId) => api.get(`/checkins/vehicle/${vehicleId}`),
 };
 
 export default api;

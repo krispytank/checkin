@@ -26,6 +26,7 @@ import FleetDashboardPage from '../pages/fleet/FleetDashboardPage.jsx';
 import VehiclesPage from '../pages/fleet/VehiclesPage.jsx';
 import TripsPage from '../pages/fleet/TripsPage.jsx';
 import ParkingPage from '../pages/fleet/ParkingPage.jsx';
+import CheckInOutPage from '../pages/fleet/CheckInOutPage.jsx';
 import NotFoundPage from '../pages/NotFoundPage.jsx';
 
 function ProtectedRoute({ children, requiredRoles = [] }) {
@@ -183,6 +184,13 @@ export default function AppRouter() {
         <ProtectedRoute>
           <MainLayout module="fleet">
             <ParkingPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/fleet/checkin">
+        <ProtectedRoute>
+          <MainLayout module="fleet">
+            <CheckInOutPage />
           </MainLayout>
         </ProtectedRoute>
       </Route>

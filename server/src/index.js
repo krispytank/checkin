@@ -25,6 +25,7 @@ import bookerRoutes from './routes/bookers.js';
 import vehicleRoutes from './routes/vehicles.js';
 import tripRoutes from './routes/trips.js';
 import parkingRoutes from './routes/parking.js';
+import checkinRoutes from './routes/checkins.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -92,6 +93,7 @@ app.use('/api/bookers', bookerRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/parking', parkingRoutes);
+app.use('/api/checkins', checkinRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static(join(__dirname, '../uploads')));

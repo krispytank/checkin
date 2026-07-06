@@ -86,7 +86,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
     const db = getDB();
 
     // Check for duplicate name
-    const existing = await db.collection('stations').findOne({ name: name.trim() });
+    const existing = await db.collection('stations').findOne({ name: name.trim().toUpperCase() });
     if (existing) {
       return res.status(409).json({ 
         success: false, 
@@ -96,7 +96,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
 
     // Create station
     const newStation = {
-      name: name.trim(),
+      name: name.trim().toUpperCase(),
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),
       radiusMeters: parseInt(radiusMeters),
@@ -138,7 +138,7 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res, next) => {
 
     if (name && name !== station.name) {
       const existing = await db.collection('stations').findOne({ 
-        name: name.trim(), 
+        name: name.trim().toUpperCase(), 
         _id: { $ne: new ObjectId(id) } 
       });
       if (existing) {
@@ -147,7 +147,7 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res, next) => {
           message: 'Station name already exists' 
         });
       }
-      updateData.name = name.trim();
+      updateData.name = name.trim().toUpperCase();
     }
 
     if (latitude !== undefined) {

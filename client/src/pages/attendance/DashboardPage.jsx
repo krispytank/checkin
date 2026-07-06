@@ -300,8 +300,8 @@ export default function DashboardPage() {
 
       {/* Check-in Modal */}
       {showCheckInModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4">
-          <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-xl bg-card p-5 sm:p-6 shadow-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-card p-5 sm:p-6 shadow-lg max-h-[85vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">Check In</h3>
             {gpsError && (
               <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
@@ -344,8 +344,8 @@ export default function DashboardPage() {
 
       {/* Check-out Modal */}
       {showCheckOutModal && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 sm:p-4">
-          <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-xl bg-card p-5 sm:p-6 shadow-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl bg-card p-5 sm:p-6 shadow-lg max-h-[85vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">Check Out</h3>
             {gpsError && (
               <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">

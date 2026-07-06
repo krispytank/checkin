@@ -15,6 +15,10 @@ import config from '../config.js';
 
 const router = Router();
 
+function toTitleCase(str) {
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
+}
+
 // GET /api/users
 router.get('/', authenticate, async (req, res, next) => {
   try {
@@ -173,7 +177,7 @@ router.post('/bulk', authenticate, authorize('admin'), async (req, res, next) =>
         // Create user
         await db.collection('users').insertOne({
           employeeId: employeeId.trim(),
-          name: name.trim(),
+          name: toTitleCase(name.trim()),
           email: email.toLowerCase().trim(),
           password: hashedPassword,
           role: role || 'user',
@@ -262,7 +266,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
     // Create user with default module access
     const newUser = {
       employeeId,
-      name: name.trim(),
+      name: toTitleCase(name.trim()),
       email: email.toLowerCase().trim(),
       password: hashedPassword,
       role,
@@ -370,7 +374,7 @@ router.put('/:id', authenticate, async (req, res, next) => {
       updateData.email = email.toLowerCase().trim();
     }
 
-    if (name) updateData.name = name.trim();
+    if (name) updateData.name = toTitleCase(name.trim());
     if (department !== undefined) updateData.department = department;
     if (jobTitle !== undefined) updateData.jobTitle = jobTitle;
     if (stationId !== undefined) updateData.stationId = stationId;

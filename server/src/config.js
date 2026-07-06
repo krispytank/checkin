@@ -78,6 +78,8 @@ const config = {
       'manage_vehicles',
       'manage_drivers',
       'manage_parking',
+      'scan_vehicle',
+      'export_qr',
     ],
   },
 
@@ -100,9 +102,9 @@ const config = {
       admin: ['*'],
       manager: [
         'book_vehicle', 'view_own_trips', 'view_all_trips',
-        'manage_all_trips', 'approve_trips',
+        'manage_all_trips', 'approve_trips', 'scan_vehicle', 'export_qr',
       ],
-      driver: ['view_own_trips'],
+      driver: ['view_own_trips', 'scan_vehicle'],
       user: ['book_vehicle', 'view_own_trips'],
     },
   },

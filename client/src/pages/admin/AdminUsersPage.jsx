@@ -110,25 +110,25 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">User Management</h1>
-          <p className="text-muted-foreground">Create and manage user accounts</p>
+          <h1 className="text-xl sm:text-2xl font-bold">User Management</h1>
+          <p className="text-muted-foreground text-sm">Create and manage user accounts</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowCsvUpload(true)}
-            className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium hover:bg-muted"
+            className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted"
           >
             <Upload className="h-4 w-4" />
-            Import CSV
+            <span className="hidden sm:inline">Import CSV</span><span className="sm:hidden">Import</span>
           </button>
           <button
             onClick={() => { setEditingUser(null); setShowForm(true); }}
-            className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+            className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="h-4 w-4" />
-            Add User
+            <span className="hidden sm:inline">Add User</span><span className="sm:hidden">Add</span>
           </button>
         </div>
       </div>
@@ -282,8 +282,8 @@ export default function AdminUsersPage() {
 
       {/* Module Access Modal */}
       {showModuleAccess && selectedUserForModules && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-2xl rounded-xl bg-card p-6 shadow-lg max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl rounded-xl bg-card p-4 sm:p-6 shadow-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h3 className="text-lg font-semibold">Module Access</h3>
@@ -355,8 +355,8 @@ function UserFormModal({ user, stations, jobTitles, departments, onClose, onSucc
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-lg rounded-xl bg-card p-6 shadow-lg max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-xl bg-card p-4 sm:p-6 shadow-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">{user ? 'Edit User' : 'Create User'}</h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-muted">

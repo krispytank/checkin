@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { Shield, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -32,9 +32,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo and title */}
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-            <Shield className="h-8 w-8" />
-          </div>
+          <img src="/jud-logo.png" alt="Mahakama" className="mx-auto h-24 w-24 rounded-2xl object-contain" />
           <h1 className="mt-6 text-3xl font-bold">Mahakama Access</h1>
           <p className="mt-2 text-muted-foreground">
             Secure, Accessible and Available Services

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vehicleAPI } from '../../lib/api.js';
-import { Plus, Search, Loader2, Car, X, Edit2, Trash2 } from 'lucide-react';
+import VehicleQRPreview from '../../components/VehicleQRPreview.jsx';
+import UserEmployeeSelect from '../../components/UserEmployeeSelect.jsx';
+import { Plus, Search, Loader2, Car, X, Edit2, QrCode, Download, Ban, RotateCcw, Calendar } from 'lucide-react';
 
 const VEHICLE_CATEGORIES = [
   { value: 'sedan', label: 'Sedan' },
@@ -16,12 +18,20 @@ const STATUS_CONFIG = {
   booked: { label: 'Booked', color: 'text-yellow-600', bg: 'bg-yellow-100' },
   'in-use': { label: 'In Use', color: 'text-blue-600', bg: 'bg-blue-100' },
   maintenance: { label: 'Maintenance', color: 'text-red-600', bg: 'bg-red-100' },
+  deactivated: { label: 'Deactivated', color: 'text-gray-600', bg: 'bg-gray-100' },
+};
+
+const QR_STATUS_CONFIG = {
+  active: { label: 'Active', color: 'text-green-600', bg: 'bg-green-100' },
+  inactive: { label: 'Not Generated', color: 'text-yellow-600', bg: 'bg-yellow-100' },
+  revoked: { label: 'Revoked', color: 'text-red-600', bg: 'bg-red-100' },
 };
 
 function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting }) {
   const [formData, setFormData] = useState({
     name: vehicle?.name || '',
     plateNumber: vehicle?.plateNumber || '',
+    employeeNo: vehicle?.employeeNo || '',
     category: vehicle?.category || 'sedan',
     capacity: vehicle?.capacity || 4,
     description: vehicle?.description || '',
@@ -46,6 +56,12 @@ function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting }) {
           <input type="text" value={formData.plateNumber}
             onChange={e => setFormData({ ...formData, plateNumber: e.target.value.toUpperCase() })}
             className="w-full rounded-lg border bg-background px-3 py-2 text-sm" required />
+        </div>
+        <div className="sm:col-span-2">
+          <UserEmployeeSelect
+            value={formData.employeeNo}
+            onChange={v => setFormData({ ...formData, employeeNo: v })}
+          />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Category</label>
@@ -87,7 +103,11 @@ export default function AdminFleetVehiclesPage() {
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState(null);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deactivateConfirm, setDeactivateConfirm] = useState(null);
+  const [reactivateConfirm, setReactivateConfirm] = useState(null);
+  const [qrPreviewVehicle, setQrPreviewVehicle] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const currentYear = new Date().getFullYear();
 
   const { data, isLoading } = useQuery({
     queryKey: ['fleet', 'vehicles', { search }],
@@ -119,30 +139,119 @@ export default function AdminFleetVehiclesPage() {
     },
   });
 
-  const deleteMutation = useMutation({
+  const deactivateMutation = useMutation({
     mutationFn: async (id) => {
-      const res = await vehicleAPI.delete(id);
+      const res = await vehicleAPI.deactivate(id);
       return res.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fleet', 'vehicles'] });
-      setDeleteConfirm(null);
+      setDeactivateConfirm(null);
+    },
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: async (id) => {
+      const res = await vehicleAPI.reactivate(id);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fleet', 'vehicles'] });
+      setReactivateConfirm(null);
+    },
+  });
+
+  const generateYearMutation = useMutation({
+    mutationFn: async () => {
+      const res = await vehicleAPI.generateYearQR();
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fleet', 'vehicles'] });
+    },
+  });
+
+  const generateSingleMutation = useMutation({
+    mutationFn: async (id) => {
+      const res = await vehicleAPI.generateQR(id);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fleet', 'vehicles'] });
     },
   });
 
   const vehicles = data?.data || [];
+  const vehiclesNeedingQR = vehicles.filter(
+    (v) => v.status !== 'deactivated' && (v.qrStatus !== 'active' || v.qrGeneratedYear !== currentYear)
+  );
+
+  async function handleExportAll() {
+    const ids = selectedIds.length > 0 ? selectedIds : vehicles.map((v) => v._id);
+    if (ids.length === 0) return;
+
+    try {
+      const res = await vehicleAPI.exportQRPdfBatch(ids);
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'vehicle-qr-stickers.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Batch PDF export failed:', err);
+    }
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.length === vehicles.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(vehicles.map((v) => v._id));
+    }
+  }
+
+  function toggleSelect(id) {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Fleet Vehicles</h1>
-          <p className="text-muted-foreground">Manage court fleet vehicles</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Fleet Vehicles</h1>
+          <p className="text-muted-foreground text-sm">Manage court fleet vehicles</p>
         </div>
-        <button onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700">
-          <Plus className="h-4 w-4" /> Add Vehicle
-        </button>
+        <div className="flex flex-wrap gap-2">
+          {vehiclesNeedingQR.length > 0 && (
+            <button
+              onClick={() => generateYearMutation.mutate()}
+              disabled={generateYearMutation.isPending}
+              className="flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+            >
+              {generateYearMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Calendar className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">Generate QR for {currentYear}</span>
+              <span className="sm:hidden">QR {currentYear}</span>
+              <span className="text-xs">({vehiclesNeedingQR.length})</span>
+            </button>
+          )}
+          <button onClick={handleExportAll}
+            className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors">
+            <Download className="h-4 w-4" /> <span className="hidden sm:inline">Export All QR</span><span className="sm:hidden">Export</span>
+          </button>
+          <button onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700">
+            <Plus className="h-4 w-4" /> <span className="hidden sm:inline">Add Vehicle</span><span className="sm:hidden">Add</span>
+          </button>
+        </div>
       </div>
 
       <div className="relative">
@@ -185,19 +294,39 @@ export default function AdminFleetVehiclesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/50">
+                  <th className="p-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.length === vehicles.length && vehicles.length > 0}
+                      onChange={toggleSelectAll}
+                      className="rounded"
+                    />
+                  </th>
                   <th className="text-left p-3 font-medium">Name</th>
                   <th className="text-left p-3 font-medium">Plate</th>
                   <th className="text-left p-3 font-medium">Category</th>
                   <th className="text-left p-3 font-medium">Capacity</th>
                   <th className="text-left p-3 font-medium">Status</th>
+                  <th className="text-left p-3 font-medium">QR Status</th>
                   <th className="text-right p-3 font-medium">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {vehicles.map(vehicle => {
                   const statusCfg = STATUS_CONFIG[vehicle.status] || STATUS_CONFIG.available;
+                  const qrCfg = QR_STATUS_CONFIG[vehicle.qrStatus] || QR_STATUS_CONFIG.inactive;
+                  const isDeactivated = vehicle.status === 'deactivated';
                   return (
-                    <tr key={vehicle._id} className="hover:bg-muted/30">
+                    <tr key={vehicle._id} className={`hover:bg-muted/30 ${isDeactivated ? 'opacity-60' : ''}`}>
+                      <td className="p-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(vehicle._id)}
+                          onChange={() => toggleSelect(vehicle._id)}
+                          className="rounded"
+                          disabled={isDeactivated}
+                        />
+                      </td>
                       <td className="p-3 font-medium">{vehicle.name}</td>
                       <td className="p-3">{vehicle.plateNumber}</td>
                       <td className="p-3 capitalize">{vehicle.category}</td>
@@ -207,16 +336,56 @@ export default function AdminFleetVehiclesPage() {
                           {statusCfg.label}
                         </span>
                       </td>
+                      <td className="p-3">
+                        <div className="flex items-center gap-2">
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${qrCfg.bg} ${qrCfg.color}`}>
+                            {qrCfg.label}
+                          </span>
+                          {vehicle.qrGeneratedYear && (
+                            <span className="text-xs text-muted-foreground">({vehicle.qrGeneratedYear})</span>
+                          )}
+                        </div>
+                      </td>
                       <td className="p-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => setEditingVehicle(vehicle)}
-                            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground">
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button onClick={() => setDeleteConfirm(vehicle)}
-                            className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {vehicle.qrStatus === 'active' && vehicle.qrGeneratedYear === currentYear && (
+                            <button
+                              onClick={() => setQrPreviewVehicle(vehicle)}
+                              className="p-1.5 rounded hover:bg-muted text-emerald-600 hover:text-emerald-700"
+                              title="View/Print QR Code"
+                            >
+                              <QrCode className="h-4 w-4" />
+                            </button>
+                          )}
+                          {(!vehicle.qrCode || vehicle.qrStatus !== 'active' || vehicle.qrGeneratedYear !== currentYear) && !isDeactivated && (
+                            <button
+                              onClick={() => generateSingleMutation.mutate(vehicle._id)}
+                              disabled={generateSingleMutation.isPending}
+                              className="p-1.5 rounded hover:bg-muted text-emerald-600 hover:text-emerald-700"
+                              title={`Generate QR for ${currentYear}`}
+                            >
+                              <Calendar className="h-4 w-4" />
+                            </button>
+                          )}
+                          {!isDeactivated ? (
+                            <>
+                              <button onClick={() => setEditingVehicle(vehicle)}
+                                className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground">
+                                <Edit2 className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => setDeactivateConfirm(vehicle)}
+                                className="p-1.5 rounded hover:bg-red-100 text-muted-foreground hover:text-red-600"
+                                title="Deactivate vehicle">
+                                <Ban className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <button onClick={() => setReactivateConfirm(vehicle)}
+                              className="p-1.5 rounded hover:bg-green-100 text-muted-foreground hover:text-green-600"
+                              title="Reactivate vehicle">
+                              <RotateCcw className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -225,27 +394,69 @@ export default function AdminFleetVehiclesPage() {
               </tbody>
             </table>
           </div>
+          {selectedIds.length > 0 && (
+            <div className="p-3 border-t bg-muted/30 flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">{selectedIds.length} selected</span>
+              <button
+                onClick={handleExportAll}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                <Download className="h-4 w-4" />
+                Export Selected QR
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {deleteConfirm && (
+      {deactivateConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-sm rounded-xl bg-card p-6 shadow-xl text-center">
-            <Trash2 className="h-12 w-12 mx-auto mb-4 text-destructive" />
-            <h2 className="text-lg font-semibold mb-2">Delete Vehicle?</h2>
+            <Ban className="h-12 w-12 mx-auto mb-4 text-red-500" />
+            <h2 className="text-lg font-semibold mb-2">Deactivate Vehicle?</h2>
             <p className="text-sm text-muted-foreground mb-6">
-              This will permanently delete <strong>{deleteConfirm.name}</strong>.
+              This will deactivate <strong>{deactivateConfirm.name}</strong> and revoke its QR code.
+              The vehicle will no longer be able to check in/out.
             </p>
             <div className="flex justify-center gap-2">
-              <button onClick={() => setDeleteConfirm(null)}
+              <button onClick={() => setDeactivateConfirm(null)}
                 className="px-4 py-2 text-sm font-medium rounded-lg border hover:bg-muted transition-colors">Cancel</button>
-              <button onClick={() => deleteMutation.mutate(deleteConfirm._id)} disabled={deleteMutation.isPending}
-                className="px-4 py-2 text-sm font-medium rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50">
-                {deleteMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Delete'}
+              <button onClick={() => deactivateMutation.mutate(deactivateConfirm._id)} disabled={deactivateMutation.isPending}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50">
+                {deactivateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Deactivate'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {reactivateConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-card p-6 shadow-xl text-center">
+            <RotateCcw className="h-12 w-12 mx-auto mb-4 text-green-500" />
+            <h2 className="text-lg font-semibold mb-2">Reactivate Vehicle?</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              This will reactivate <strong>{reactivateConfirm.name}</strong>. A new QR code will need to be generated for {currentYear}.
+            </p>
+            <div className="flex justify-center gap-2">
+              <button onClick={() => setReactivateConfirm(null)}
+                className="px-4 py-2 text-sm font-medium rounded-lg border hover:bg-muted transition-colors">Cancel</button>
+              <button onClick={() => reactivateMutation.mutate(reactivateConfirm._id)} disabled={reactivateMutation.isPending}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50">
+                {reactivateMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Reactivate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {qrPreviewVehicle && (
+        <VehicleQRPreview
+          vehicleId={qrPreviewVehicle._id}
+          vehicleName={qrPreviewVehicle.name}
+          plateNumber={qrPreviewVehicle.plateNumber}
+          onClose={() => setQrPreviewVehicle(null)}
+        />
       )}
     </div>
   );

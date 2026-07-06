@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../contexts/AuthContext.jsx';
-import { Shield, Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
 
 const emailSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -83,9 +83,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo and title */}
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-            <Shield className="h-8 w-8" />
-          </div>
+          <img src="/jud-logo.png" alt="Mahakama" className="mx-auto h-16 w-16 rounded-2xl object-contain" />
           <h1 className="mt-6 text-2xl font-bold">
             {step === 1 ? 'Forgot Password' : 'Reset Password'}
           </h1>
