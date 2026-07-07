@@ -26,6 +26,16 @@ import vehicleRoutes from './routes/vehicles.js';
 import tripRoutes from './routes/trips.js';
 import parkingRoutes from './routes/parking.js';
 import checkinRoutes from './routes/checkins.js';
+import auditLogRoutes from './routes/auditLogs.js';
+import registryRoutes from './routes/registries.js';
+import parkingLotRoutes from './routes/parkingLots.js';
+import visitorParkingRoutes from './routes/visitorParking.js';
+import maintenanceRoutes from './routes/maintenance.js';
+import fileMovementRoutes from './routes/fileMovement.js';
+import fleetDashboardRoutes from './routes/fleetDashboard.js';
+import fleetReportRoutes from './routes/fleetReports.js';
+import fileReportRoutes from './routes/fileReports.js';
+import dashboardRoutes from './routes/dashboard.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -94,6 +104,16 @@ app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/parking', parkingRoutes);
 app.use('/api/checkins', checkinRoutes);
+app.use('/api/audit-logs', auditLogRoutes);
+app.use('/api/registries', registryRoutes);
+app.use('/api/parking-lots', parkingLotRoutes);
+app.use('/api/visitor-parking', visitorParkingRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
+app.use('/api/file-movement', fileMovementRoutes);
+app.use('/api/fleet/dashboard', fleetDashboardRoutes);
+app.use('/api/fleet/reports', fleetReportRoutes);
+app.use('/api/file-reports', fileReportRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static(join(__dirname, '../uploads')));

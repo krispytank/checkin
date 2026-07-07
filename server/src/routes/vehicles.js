@@ -362,7 +362,11 @@ router.get('/:id', authenticate, async (req, res, next) => {
 // POST /api/vehicles - Create vehicle (admin only)
 router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, res, next) => {
   try {
-    const { name, plateNumber, employeeNo = '', category = 'sedan', capacity = 4, description = '' } = req.body;
+    const {
+      name, plateNumber, employeeNo = '', category = 'sedan', capacity = 4, description = '',
+      make, model, year, fuelType, insuranceExpiry, inspectionExpiry, serviceSchedule,
+      currentMileage, assignedDriverId, assignedParkingLotId, assignedStationId,
+    } = req.body;
 
     const nameError = validateRequired(name, 'Name');
     if (nameError) return res.status(400).json({ success: false, message: nameError });
@@ -398,7 +402,18 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, re
       capacity: parseInt(capacity) || 4,
       description: description.trim(),
       status: 'available',
-      mileage: 0,
+      mileage: parseInt(currentMileage) || 0,
+      make: make?.trim() || null,
+      model: model?.trim() || null,
+      year: year ? parseInt(year) : null,
+      fuelType: fuelType?.trim() || null,
+      insuranceExpiry: insuranceExpiry ? new Date(insuranceExpiry) : null,
+      inspectionExpiry: inspectionExpiry ? new Date(inspectionExpiry) : null,
+      serviceSchedule: serviceSchedule ? new Date(serviceSchedule) : null,
+      currentMileage: parseInt(currentMileage) || 0,
+      assignedDriverId: assignedDriverId || null,
+      assignedParkingLotId: assignedParkingLotId || null,
+      assignedStationId: assignedStationId || null,
       qrCode: null,
       qrGeneratedYear: null,
       qrStatus: 'inactive',
@@ -419,7 +434,11 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, re
 // PUT /api/vehicles/:id - Update vehicle (admin only)
 router.put('/:id', authenticate, authorizeModule('fleet', 'admin'), async (req, res, next) => {
   try {
-    const { name, plateNumber, employeeNo, category, capacity, description, status, mileage } = req.body;
+    const {
+      name, plateNumber, employeeNo, category, capacity, description, status, mileage,
+      make, model, year, fuelType, insuranceExpiry, inspectionExpiry, serviceSchedule,
+      currentMileage, assignedDriverId, assignedParkingLotId, assignedStationId,
+    } = req.body;
     const db = getDB();
 
     let vehicle;
@@ -459,6 +478,17 @@ router.put('/:id', authenticate, authorizeModule('fleet', 'admin'), async (req, 
     if (description !== undefined) updateData.description = description.trim();
     if (status) updateData.status = status;
     if (mileage !== undefined) updateData.mileage = parseInt(mileage);
+    if (make !== undefined) updateData.make = make?.trim() || null;
+    if (model !== undefined) updateData.model = model?.trim() || null;
+    if (year !== undefined) updateData.year = year ? parseInt(year) : null;
+    if (fuelType !== undefined) updateData.fuelType = fuelType?.trim() || null;
+    if (insuranceExpiry !== undefined) updateData.insuranceExpiry = insuranceExpiry ? new Date(insuranceExpiry) : null;
+    if (inspectionExpiry !== undefined) updateData.inspectionExpiry = inspectionExpiry ? new Date(inspectionExpiry) : null;
+    if (serviceSchedule !== undefined) updateData.serviceSchedule = serviceSchedule ? new Date(serviceSchedule) : null;
+    if (currentMileage !== undefined) updateData.currentMileage = parseInt(currentMileage);
+    if (assignedDriverId !== undefined) updateData.assignedDriverId = assignedDriverId || null;
+    if (assignedParkingLotId !== undefined) updateData.assignedParkingLotId = assignedParkingLotId || null;
+    if (assignedStationId !== undefined) updateData.assignedStationId = assignedStationId || null;
 
     // If plate number changed and QR exists, invalidate QR (needs regeneration)
     if (plateNumber && plateNumber.toUpperCase().trim() !== vehicle.plateNumber) {

@@ -136,3 +136,30 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Sidebar transitions */
+.sidebar-transition {
+  transition: width 300ms ease-in-out, transform 300ms ease-in-out;
+}
+
+.sidebar-label-transition {
+  transition: opacity 200ms ease-in-out;
+}
+
+/* Mobile drawer overlay */
+.drawer-overlay {
+  transition: opacity 200ms ease-in-out;
+}
+
+/* Subtle icon hover effect */
+.nav-icon-hover {
+  transition: transform 150ms ease-in-out;
+}
+.nav-icon-hover:hover {
+  transform: scale(1.05);
+}
+
+/* Active indicator glow */
+.active-glow {
+  box-shadow: 0 0 8px 0 hsl(var(--primary) / 0.15);
+}

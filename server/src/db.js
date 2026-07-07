@@ -73,6 +73,39 @@ async function createIndexes(database) {
 
     // Stations collection indexes
     await database.collection('stations').createIndex({ latitude: 1, longitude: 1 });
+    await database.collection('stations').createIndex({ name: 1 }, { unique: true });
+
+    // Registries collection indexes
+    await database.collection('registries').createIndex({ courtStationId: 1 });
+    await database.collection('registries').createIndex({ name: 1, courtStationId: 1 }, { unique: true });
+
+    // Case files collection indexes
+    await database.collection('case_files').createIndex({ caseFileNumber: 1 }, { unique: true });
+    await database.collection('case_files').createIndex({ registryId: 1 });
+    await database.collection('case_files').createIndex({ courtStationId: 1 });
+    await database.collection('case_files').createIndex({ currentHolderId: 1 });
+    await database.collection('case_files').createIndex({ fileStatus: 1 });
+    await database.collection('case_files').createIndex({ caseStatus: 1 });
+    await database.collection('case_files').createIndex({ caseFileNumber: 'text', caseTitle: 'text' });
+
+    // File movements collection indexes
+    await database.collection('file_movements').createIndex({ caseFileId: 1 });
+    await database.collection('file_movements').createIndex({ fromHolderId: 1 });
+    await database.collection('file_movements').createIndex({ toHolderId: 1 });
+    await database.collection('file_movements').createIndex({ status: 1 });
+    await database.collection('file_movements').createIndex({ dateIssued: -1 });
+    await database.collection('file_movements').createIndex({ expectedReturnDate: 1 });
+
+    // File requests collection indexes
+    await database.collection('file_requests').createIndex({ requesterId: 1 });
+    await database.collection('file_requests').createIndex({ caseFileId: 1 });
+    await database.collection('file_requests').createIndex({ status: 1 });
+    await database.collection('file_requests').createIndex({ createdAt: -1 });
+
+    // Strong room records collection indexes
+    await database.collection('strong_room_records').createIndex({ caseFileId: 1 });
+    await database.collection('strong_room_records').createIndex({ status: 1 });
+    await database.collection('strong_room_records').createIndex({ releaseTime: -1 });
 
     // Shifts collection indexes
     await database.collection('shifts').createIndex({ name: 1 }, { unique: true });
@@ -116,6 +149,8 @@ async function createIndexes(database) {
     await database.collection('trips').createIndex({ tripId: 1 }, { unique: true });
     await database.collection('trips').createIndex({ vehicleId: 1 });
     await database.collection('trips').createIndex({ userId: 1 });
+    await database.collection('trips').createIndex({ driverId: 1 });
+    await database.collection('trips').createIndex({ requestingOfficerId: 1 });
     await database.collection('trips').createIndex({ status: 1 });
     await database.collection('trips').createIndex({ departureDate: 1 });
 
@@ -123,12 +158,38 @@ async function createIndexes(database) {
     await database.collection('parking_spaces').createIndex({ stationId: 1 });
     await database.collection('parking_spaces').createIndex({ status: 1 });
 
+    // Parking lots collection indexes
+    await database.collection('parking_lots').createIndex({ courtStationId: 1 });
+    await database.collection('parking_lots').createIndex({ category: 1 });
+    await database.collection('parking_lots').createIndex({ status: 1 });
+
+    // Visitor parking collection indexes
+    await database.collection('visitor_parking').createIndex({ courtStationId: 1 });
+    await database.collection('visitor_parking').createIndex({ vehicleRegNumber: 1 });
+    await database.collection('visitor_parking').createIndex({ status: 1 });
+    await database.collection('visitor_parking').createIndex({ timeIn: -1 });
+
+    // Vehicle maintenance collection indexes
+    await database.collection('vehicle_maintenance').createIndex({ vehicleId: 1 });
+    await database.collection('vehicle_maintenance').createIndex({ status: 1 });
+    await database.collection('vehicle_maintenance').createIndex({ scheduledDate: 1 });
+    await database.collection('vehicle_maintenance').createIndex({ reminderDate: 1 });
+
     // Vehicle checkins collection indexes
     await database.collection('vehicle_checkins').createIndex({ vehicleId: 1 });
     await database.collection('vehicle_checkins').createIndex({ stationId: 1 });
     await database.collection('vehicle_checkins').createIndex({ timestamp: -1 });
     await database.collection('vehicle_checkins').createIndex({ type: 1 });
     await database.collection('vehicle_checkins').createIndex({ vehicleId: 1, stationId: 1, type: 1 });
+
+    // Audit logs collection indexes
+    await database.collection('audit_logs').createIndex({ timestamp: -1 });
+    await database.collection('audit_logs').createIndex({ userId: 1 });
+    await database.collection('audit_logs').createIndex({ module: 1 });
+    await database.collection('audit_logs').createIndex({ entityType: 1 });
+    await database.collection('audit_logs').createIndex({ entityId: 1 });
+    await database.collection('audit_logs').createIndex({ stationId: 1 });
+    await database.collection('audit_logs').createIndex({ module: 1, action: 1 });
 
     console.log('Database indexes created successfully');
   } catch (error) {
@@ -204,7 +265,7 @@ async function createSchemas(database) {
         },
       },
     },
-    // Stations schema
+    // Stations schema (Court Stations)
     {
       collection: 'stations',
       validator: {
@@ -216,6 +277,131 @@ async function createSchemas(database) {
             latitude: { bsonType: 'double', minimum: -90, maximum: 90, description: 'Latitude must be between -90 and 90' },
             longitude: { bsonType: 'double', minimum: -180, maximum: 180, description: 'Longitude must be between -180 and 180' },
             radiusMeters: { bsonType: 'int', minimum: 10, maximum: 1000, description: 'Radius must be between 10 and 1000' },
+            address: { bsonType: ['string', 'null'] },
+            city: { bsonType: ['string', 'null'] },
+            phoneNumber: { bsonType: ['string', 'null'] },
+            isActive: { bsonType: 'bool' },
+            createdAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // Registries schema
+    {
+      collection: 'registries',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['name', 'courtStationId'],
+          properties: {
+            name: { bsonType: 'string', description: 'Registry name is required' },
+            courtStationId: { bsonType: 'string', description: 'Court station ID is required' },
+            description: { bsonType: 'string' },
+            isActive: { bsonType: 'bool' },
+            createdAt: { bsonType: 'date' },
+            updatedAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // Case Files schema
+    {
+      collection: 'case_files',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['caseFileNumber', 'caseTitle', 'registryId', 'courtStationId'],
+          properties: {
+            caseFileNumber: { bsonType: 'string', description: 'Case file number is required' },
+            caseTitle: { bsonType: 'string', description: 'Case title is required' },
+            caseType: { bsonType: 'string' },
+            registryId: { bsonType: 'string', description: 'Registry ID is required' },
+            courtStationId: { bsonType: 'string', description: 'Court station ID is required' },
+            courtRoom: { bsonType: ['string', 'null'] },
+            caseStatus: { bsonType: 'string' },
+            fileStatus: { bsonType: 'string' },
+            fileCategory: { bsonType: 'string' },
+            currentHolderId: { bsonType: ['string', 'null'] },
+            currentLocation: { bsonType: 'string' },
+            dateOpened: { bsonType: ['date', 'null'] },
+            parties: { bsonType: ['string', 'null'] },
+            createdAt: { bsonType: 'date' },
+            updatedAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // File Movements schema
+    {
+      collection: 'file_movements',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['caseFileId', 'fromHolderId', 'movementType', 'reason'],
+          properties: {
+            caseFileId: { bsonType: 'string', description: 'Case file ID is required' },
+            fromHolderId: { bsonType: 'string', description: 'From holder ID is required' },
+            toHolderId: { bsonType: ['string', 'null'] },
+            fromRegistryId: { bsonType: ['string', 'null'] },
+            toDestination: { bsonType: 'string' },
+            movementType: { bsonType: 'string' },
+            reason: { bsonType: 'string' },
+            dateIssued: { bsonType: 'date' },
+            timeIssued: { bsonType: 'date' },
+            expectedReturnDate: { bsonType: ['date', 'null'] },
+            actualReturnDate: { bsonType: ['date', 'null'] },
+            status: { bsonType: 'string' },
+            remarks: { bsonType: ['string', 'null'] },
+            digitalSignature: { bsonType: ['string', 'null'] },
+            acknowledgedBy: { bsonType: ['string', 'null'] },
+            acknowledgedAt: { bsonType: ['date', 'null'] },
+            createdAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // File Requests schema
+    {
+      collection: 'file_requests',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['requesterId', 'caseFileId', 'reason', 'purpose'],
+          properties: {
+            requesterId: { bsonType: 'string', description: 'Requester ID is required' },
+            caseFileId: { bsonType: 'string', description: 'Case file ID is required' },
+            department: { bsonType: ['string', 'null'] },
+            reason: { bsonType: 'string' },
+            purpose: { bsonType: 'string' },
+            urgency: { bsonType: 'string' },
+            supervisorApproval: { bsonType: 'string' },
+            approvedBy: { bsonType: ['string', 'null'] },
+            approvedAt: { bsonType: ['date', 'null'] },
+            status: { bsonType: 'string' },
+            rejectionReason: { bsonType: ['string', 'null'] },
+            createdAt: { bsonType: 'date' },
+            updatedAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // Strong Room Records schema
+    {
+      collection: 'strong_room_records',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['caseFileId', 'releaseTime'],
+          properties: {
+            caseFileId: { bsonType: 'string' },
+            approvingOfficerId: { bsonType: 'string' },
+            releasedBy: { bsonType: 'string' },
+            receivedBy: { bsonType: ['string', 'null'] },
+            releaseTime: { bsonType: 'date' },
+            returnTime: { bsonType: ['date', 'null'] },
+            reason: { bsonType: 'string' },
+            status: { bsonType: 'string' },
+            digitalSignature: { bsonType: ['string', 'null'] },
             createdAt: { bsonType: 'date' },
           },
         },
@@ -296,6 +482,16 @@ async function createSchemas(database) {
             shiftReminder: { bsonType: 'bool' },
             shiftChange: { bsonType: 'bool' },
             shiftAssignment: { bsonType: 'bool' },
+            fileApproved: { bsonType: 'bool' },
+            fileReleased: { bsonType: 'bool' },
+            fileDueToday: { bsonType: 'bool' },
+            fileOverdue: { bsonType: 'bool' },
+            approvalRequired: { bsonType: 'bool' },
+            fileReturned: { bsonType: 'bool' },
+            tripApproved: { bsonType: 'bool' },
+            maintenanceDue: { bsonType: 'bool' },
+            insuranceExpiring: { bsonType: 'bool' },
+            inspectionExpiring: { bsonType: 'bool' },
             muteUntil: { bsonType: ['date', 'null'] },
             createdAt: { bsonType: 'date' },
           },
@@ -332,10 +528,94 @@ async function createSchemas(database) {
             description: { bsonType: 'string' },
             status: { bsonType: 'string' },
             mileage: { bsonType: 'int' },
+            make: { bsonType: ['string', 'null'] },
+            model: { bsonType: ['string', 'null'] },
+            year: { bsonType: ['int', 'null'] },
+            fuelType: { bsonType: ['string', 'null'] },
+            insuranceExpiry: { bsonType: ['date', 'null'] },
+            inspectionExpiry: { bsonType: ['date', 'null'] },
+            serviceSchedule: { bsonType: ['date', 'null'] },
+            currentMileage: { bsonType: ['int', 'null'] },
+            assignedDriverId: { bsonType: ['string', 'null'] },
+            assignedParkingLotId: { bsonType: ['string', 'null'] },
+            assignedStationId: { bsonType: ['string', 'null'] },
             qrCode: { bsonType: ['string', 'null'] },
             qrGeneratedYear: { bsonType: ['int', 'null'] },
             qrStatus: { bsonType: 'string' },
             deactivatedAt: { bsonType: ['date', 'null'] },
+            createdAt: { bsonType: 'date' },
+            updatedAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // Parking lots schema
+    {
+      collection: 'parking_lots',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['name', 'courtStationId', 'category', 'totalBays'],
+          properties: {
+            name: { bsonType: 'string', description: 'Parking lot name is required' },
+            courtStationId: { bsonType: 'string', description: 'Court station ID is required' },
+            category: { bsonType: 'string', description: 'Category is required' },
+            totalBays: { bsonType: 'int', minimum: 1 },
+            occupiedBays: { bsonType: 'int' },
+            reservedBays: { bsonType: 'int' },
+            description: { bsonType: ['string', 'null'] },
+            gpsLatitude: { bsonType: ['double', 'null'] },
+            gpsLongitude: { bsonType: ['double', 'null'] },
+            status: { bsonType: 'string' },
+            isActive: { bsonType: 'bool' },
+            createdAt: { bsonType: 'date' },
+            updatedAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // Visitor parking schema
+    {
+      collection: 'visitor_parking',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['vehicleRegNumber', 'ownerName', 'category', 'courtStationId', 'timeIn'],
+          properties: {
+            vehicleRegNumber: { bsonType: 'string' },
+            ownerName: { bsonType: 'string' },
+            category: { bsonType: 'string' },
+            purposeOfVisit: { bsonType: 'string' },
+            courtStationId: { bsonType: 'string' },
+            courtBeingVisited: { bsonType: ['string', 'null'] },
+            parkingSpaceId: { bsonType: ['string', 'null'] },
+            parkingLotId: { bsonType: ['string', 'null'] },
+            timeIn: { bsonType: 'date' },
+            timeOut: { bsonType: ['date', 'null'] },
+            status: { bsonType: 'string' },
+            createdAt: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // Vehicle maintenance schema
+    {
+      collection: 'vehicle_maintenance',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['vehicleId', 'type', 'status'],
+          properties: {
+            vehicleId: { bsonType: 'string' },
+            type: { bsonType: 'string' },
+            description: { bsonType: 'string' },
+            scheduledDate: { bsonType: ['date', 'null'] },
+            completedDate: { bsonType: ['date', 'null'] },
+            cost: { bsonType: ['double', 'null'] },
+            provider: { bsonType: ['string', 'null'] },
+            status: { bsonType: 'string' },
+            reminderDate: { bsonType: ['date', 'null'] },
+            notes: { bsonType: ['string', 'null'] },
             createdAt: { bsonType: 'date' },
             updatedAt: { bsonType: 'date' },
           },
@@ -357,6 +637,29 @@ async function createSchemas(database) {
             type: { enum: ['check-in', 'check-out'], description: 'Must be check-in or check-out' },
             scannedBy: { bsonType: ['string', 'null'] },
             notes: { bsonType: ['string', 'null'] },
+            timestamp: { bsonType: 'date' },
+          },
+        },
+      },
+    },
+    // Audit logs schema
+    {
+      collection: 'audit_logs',
+      validator: {
+        $jsonSchema: {
+          bsonType: 'object',
+          required: ['userId', 'action', 'module', 'entityType', 'timestamp'],
+          properties: {
+            userId: { bsonType: 'string', description: 'User ID is required' },
+            action: { bsonType: 'string', description: 'Action is required' },
+            module: { bsonType: 'string', description: 'Module is required' },
+            entityType: { bsonType: 'string', description: 'Entity type is required' },
+            entityId: { bsonType: ['string', 'null'] },
+            previousValue: { bsonType: ['object', 'null'] },
+            newValue: { bsonType: ['object', 'null'] },
+            stationId: { bsonType: ['string', 'null'] },
+            ipAddress: { bsonType: ['string', 'null'] },
+            description: { bsonType: ['string', 'null'] },
             timestamp: { bsonType: 'date' },
           },
         },
@@ -417,6 +720,8 @@ async function seedDefaultAdmin(database) {
           attendance: { enabled: true, role: 'admin', permissions: [] },
           equipment: { enabled: true, role: 'admin', permissions: [] },
           fleet: { enabled: true, role: 'admin', permissions: [] },
+          fileMovement: { enabled: true, role: 'admin', permissions: [] },
+          audit: { enabled: true, role: 'admin', permissions: [] },
         },
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -441,6 +746,8 @@ async function seedDefaultAdmin(database) {
               attendance: { enabled: true, role: 'admin', permissions: [] },
               equipment: { enabled: true, role: 'admin', permissions: [] },
               fleet: { enabled: true, role: 'admin', permissions: [] },
+              fileMovement: { enabled: true, role: 'admin', permissions: [] },
+              audit: { enabled: true, role: 'admin', permissions: [] },
             },
             updatedAt: new Date(),
           }}

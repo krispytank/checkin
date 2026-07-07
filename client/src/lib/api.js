@@ -89,6 +89,7 @@ export const messagesAPI = {
   send: (data) => api.post('/messages', data),
   markRead: (id) => api.put(`/messages/${id}/read`),
   markAllRead: () => api.put('/messages/read-all'),
+  unreadCount: () => api.get('/notifications/unread-count'),
   delete: (id) => api.delete(`/messages/${id}`),
 };
 
@@ -181,7 +182,7 @@ export const tripsAPI = {
   list: (params) => api.get('/trips', { params }),
   get: (id) => api.get(`/trips/${id}`),
   create: (data) => api.post('/trips', data),
-  updateStatus: (id, status) => api.put(`/trips/${id}/status`, { status }),
+  updateStatus: (id, status, extra = {}) => api.put(`/trips/${id}/status`, { status, ...extra }),
 };
 
 export const parkingAPI = {
@@ -199,6 +200,71 @@ export const checkinsAPI = {
   list: (params) => api.get('/checkins', { params }),
   getActive: () => api.get('/checkins/active'),
   getVehicleStatus: (vehicleId) => api.get(`/checkins/vehicle/${vehicleId}`),
+};
+
+export const auditLogsAPI = {
+  list: (params) => api.get('/audit-logs', { params }),
+  stats: () => api.get('/audit-logs/stats'),
+  purge: (olderThan) => api.delete('/audit-logs/purge', { params: { olderThan } }),
+};
+
+export const registriesAPI = {
+  list: (params) => api.get('/registries', { params }),
+  get: (id) => api.get(`/registries/${id}`),
+  create: (data) => api.post('/registries', data),
+  update: (id, data) => api.put(`/registries/${id}`, data),
+  delete: (id) => api.delete(`/registries/${id}`),
+};
+
+export const parkingLotsAPI = {
+  list: (params) => api.get('/parking-lots', { params }),
+  stats: (params) => api.get('/parking-lots/stats', { params }),
+  get: (id) => api.get(`/parking-lots/${id}`),
+  create: (data) => api.post('/parking-lots', data),
+  update: (id, data) => api.put(`/parking-lots/${id}`, data),
+  delete: (id) => api.delete(`/parking-lots/${id}`),
+};
+
+export const visitorParkingAPI = {
+  list: (params) => api.get('/visitor-parking', { params }),
+  stats: (params) => api.get('/visitor-parking/stats', { params }),
+  checkIn: (data) => api.post('/visitor-parking/check-in', data),
+  checkOut: (id) => api.put(`/visitor-parking/${id}/check-out`),
+  delete: (id) => api.delete(`/visitor-parking/${id}`),
+};
+
+export const maintenanceAPI = {
+  list: (params) => api.get('/maintenance', { params }),
+  upcoming: (params) => api.get('/maintenance/upcoming', { params }),
+  get: (id) => api.get(`/maintenance/${id}`),
+  create: (data) => api.post('/maintenance', data),
+  update: (id, data) => api.put(`/maintenance/${id}`, data),
+  delete: (id) => api.delete(`/maintenance/${id}`),
+};
+
+export const fileMovementAPI = {
+  // Case Files
+  listCaseFiles: (params) => api.get('/file-movement/case-files', { params }),
+  getCaseFile: (id) => api.get(`/file-movement/case-files/${id}`),
+  createCaseFile: (data) => api.post('/file-movement/case-files', data),
+  updateCaseFile: (id, data) => api.put(`/file-movement/case-files/${id}`, data),
+  deleteCaseFile: (id) => api.delete(`/file-movement/case-files/${id}`),
+  // Movements
+  listMovements: (params) => api.get('/file-movement/movements', { params }),
+  createMovement: (data) => api.post('/file-movement/movements', data),
+  returnFile: (movementId, data) => api.put(`/file-movement/movements/${movementId}/return`, data),
+  // Requests
+  listRequests: (params) => api.get('/file-movement/requests', { params }),
+  createRequest: (data) => api.post('/file-movement/requests', data),
+  approveRequest: (id, data) => api.put(`/file-movement/requests/${id}/approve`, data),
+  // Strong Room
+  listStrongRoom: (params) => api.get('/file-movement/strong-room', { params }),
+  releaseFromStrongRoom: (data) => api.post('/file-movement/strong-room/release', data),
+  returnToStrongRoom: (id, data) => api.put(`/file-movement/strong-room/${id}/return`, data),
+  // Tracking
+  trackFile: (caseFileId) => api.get(`/file-movement/tracking/${caseFileId}`),
+  // Dashboard
+  getDashboard: (params) => api.get('/file-movement/dashboard', { params }),
 };
 
 export default api;

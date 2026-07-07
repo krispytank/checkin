@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
 import { authenticate, authorizeModule } from '../middleware/auth.js';
 import { validateRequired, validatePagination } from '../middleware/validation.js';
+import { sendSystemNotification } from './notifications.js';
 
 const router = Router();
 
@@ -154,6 +155,25 @@ router.post('/', authenticate, authorizeModule('equipment', 'admin', 'booker'), 
     );
 
     const enriched = await enrichBooking(db, newBooking);
+
+    // Notify equipment admins of new booking request
+    const equipmentAdmins = await db.collection('users').find({
+      $or: [
+        { role: 'admin' },
+        { 'moduleAccess.equipment.role': 'admin' },
+      ],
+    }).toArray();
+    for (const admin of equipmentAdmins) {
+      if (admin._id.toString() !== req.user._id.toString()) {
+        await sendSystemNotification(
+          db, admin._id.toString(), 'approvalRequired',
+          `New equipment booking: ${bookingId}`,
+          `${req.user.name || 'A user'} has requested equipment booking ${bookingId}.`,
+          '/equipment/manage',
+        );
+      }
+    }
+
     res.status(201).json({ success: true, data: enriched });
   } catch (error) {
     next(error);
@@ -238,6 +258,17 @@ router.put('/:id/status', authenticate, async (req, res, next) => {
 
     const updated = await db.collection('bookings').findOne({ _id: new ObjectId(req.params.id) });
     const enriched = await enrichBooking(db, updated);
+
+    // Notify booker of status change
+    if (['approved', 'rejected'].includes(status)) {
+      await sendSystemNotification(
+        db, booking.userId, 'approvalRequired',
+        `Booking ${booking.bookingId} ${status}`,
+        `Your equipment booking ${booking.bookingId} has been ${status}.`,
+        '/equipment/manage',
+      );
+    }
+
     res.json({ success: true, data: enriched });
   } catch (error) {
     next(error);

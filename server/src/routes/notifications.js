@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { ObjectId } from 'mongodb';
 import { getDB } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 
@@ -13,6 +12,18 @@ const DEFAULT_PREFS = {
   shiftReminder: true,
   shiftChange: true,
   shiftAssignment: true,
+  // File movement notifications
+  fileApproved: true,
+  fileReleased: true,
+  fileDueToday: true,
+  fileOverdue: true,
+  approvalRequired: true,
+  fileReturned: true,
+  // Fleet notifications
+  tripApproved: true,
+  maintenanceDue: true,
+  insuranceExpiring: true,
+  inspectionExpiring: true,
   muteUntil: null, // null = not muted, Date = unmute at this time
 };
 
@@ -30,7 +41,7 @@ function shouldNotify(prefs, type) {
 }
 
 // Helper: send system notification if allowed
-export async function sendSystemNotification(db, receiverId, type, subject, content) {
+export async function sendSystemNotification(db, receiverId, type, subject, content, link = null) {
   const prefs = await db.collection('notification_preferences').findOne({ userId: receiverId });
   if (!shouldNotify(prefs, type)) return null;
 
@@ -40,6 +51,7 @@ export async function sendSystemNotification(db, receiverId, type, subject, cont
     type: 'notification',
     subject,
     content,
+    link: link || null,
     read: false,
     createdAt: new Date(),
   });
@@ -69,7 +81,12 @@ router.get('/preferences', authenticate, async (req, res, next) => {
 router.put('/preferences', authenticate, async (req, res, next) => {
   try {
     const db = getDB();
-    const { lateCheckIn, lateCheckOut, overtime, shiftReminder, shiftChange, shiftAssignment, muteUntil } = req.body;
+    const {
+      lateCheckIn, lateCheckOut, overtime, shiftReminder, shiftChange, shiftAssignment,
+      fileApproved, fileReleased, fileDueToday, fileOverdue, approvalRequired, fileReturned,
+      tripApproved, maintenanceDue, insuranceExpiring, inspectionExpiring,
+      muteUntil,
+    } = req.body;
 
     const updateData = { updatedAt: new Date() };
     if (lateCheckIn !== undefined) updateData.lateCheckIn = !!lateCheckIn;
@@ -78,6 +95,16 @@ router.put('/preferences', authenticate, async (req, res, next) => {
     if (shiftReminder !== undefined) updateData.shiftReminder = !!shiftReminder;
     if (shiftChange !== undefined) updateData.shiftChange = !!shiftChange;
     if (shiftAssignment !== undefined) updateData.shiftAssignment = !!shiftAssignment;
+    if (fileApproved !== undefined) updateData.fileApproved = !!fileApproved;
+    if (fileReleased !== undefined) updateData.fileReleased = !!fileReleased;
+    if (fileDueToday !== undefined) updateData.fileDueToday = !!fileDueToday;
+    if (fileOverdue !== undefined) updateData.fileOverdue = !!fileOverdue;
+    if (approvalRequired !== undefined) updateData.approvalRequired = !!approvalRequired;
+    if (fileReturned !== undefined) updateData.fileReturned = !!fileReturned;
+    if (tripApproved !== undefined) updateData.tripApproved = !!tripApproved;
+    if (maintenanceDue !== undefined) updateData.maintenanceDue = !!maintenanceDue;
+    if (insuranceExpiring !== undefined) updateData.insuranceExpiring = !!insuranceExpiring;
+    if (inspectionExpiring !== undefined) updateData.inspectionExpiring = !!inspectionExpiring;
     if (muteUntil !== undefined) updateData.muteUntil = muteUntil ? new Date(muteUntil) : null;
 
     await db.collection('notification_preferences').updateOne(

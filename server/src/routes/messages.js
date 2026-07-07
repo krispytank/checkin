@@ -98,7 +98,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
 // POST /api/messages
 router.post('/', authenticate, async (req, res, next) => {
   try {
-    const { receiverId, type = 'message', subject, content } = req.body;
+    const { receiverId, type = 'message', subject, content, link } = req.body;
 
     // Validation
     const receiverErr = validateRequired(receiverId, 'Receiver');
@@ -156,6 +156,7 @@ router.post('/', authenticate, async (req, res, next) => {
       type,
       subject: subject.trim(),
       content: content.trim(),
+      link: link || null,
       read: false,
       createdAt: new Date(),
     };

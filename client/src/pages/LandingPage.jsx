@@ -2,7 +2,7 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import { Link } from 'wouter';
 import { motion } from 'framer-motion';
-import { Package, Clock, Car, ArrowRight, LogOut, Sun, Moon } from 'lucide-react';
+import { Package, Clock, Car, FolderOpen, ArrowRight, LogOut, Sun, Moon, LayoutDashboard } from 'lucide-react';
 import { getInitials, cn } from '../lib/utils.js';
 
 export default function LandingPage() {
@@ -49,12 +49,51 @@ export default function LandingPage() {
             Welcome back, {user?.name?.split(' ')[0]}
           </h1>
           <p className="text-muted-foreground text-base sm:text-lg max-w-md mx-auto">
-            Choose what you'd like to do today
+            Choose what you would like to do today
           </p>
         </motion.div>
 
-        {/* Two cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl w-full">
+        {/* Module cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 max-w-7xl w-full">
+          {/* Dashboard Card */}
+          <Link href="/dashboard">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.0 }}
+              whileHover={{ y: -6, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={cn(
+                "group relative cursor-pointer rounded-2xl border p-8 shadow-sm transition-all duration-300",
+                "bg-card hover:shadow-lg hover:border-primary/30",
+                "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+              )}
+            >
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="relative">
+                <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                  <LayoutDashboard className="h-7 w-7" />
+                </div>
+                <h2 className="text-xl font-bold mb-2">Dashboard</h2>
+                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                  Unified overview of all modules — attendance, fleet, and file movement at a glance.
+                </p>
+                <ul className="space-y-2 mb-6">
+                  {['Cross-module summary', 'Pending actions', 'Quick navigation'].map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary group-hover:gap-3 transition-all">
+                  Open Dashboard
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              </div>
+            </motion.div>
+          </Link>
+
           {/* Attendance Card */}
           <Link href="/attendance/dashboard">
             <motion.div
@@ -193,6 +232,49 @@ export default function LandingPage() {
                 {/* CTA */}
                 <div className="flex items-center gap-2 text-sm font-semibold text-emerald-600 group-hover:gap-3 transition-all">
                   Open Fleet Management
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              </div>
+            </motion.div>
+          </Link>
+
+          {/* File Movement Card */}
+          <Link href="/file-movement/dashboard">
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              whileHover={{ y: -6, scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={cn(
+                "group relative cursor-pointer rounded-2xl border p-8 shadow-sm transition-all duration-300",
+                "bg-card hover:shadow-lg hover:border-indigo-500/30",
+                "focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              )}
+            >
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+              <div className="relative">
+                <div className="mb-6 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-600 transition-colors group-hover:bg-indigo-500 group-hover:text-white">
+                  <FolderOpen className="h-7 w-7" />
+                </div>
+
+                <h2 className="text-xl font-bold mb-2">File Movement</h2>
+                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                  Track case file custody, manage registry operations, and monitor file movement across court stations.
+                </p>
+
+                <ul className="space-y-2 mb-6">
+                  {['Real-time file tracking', 'Registry & strong room management', 'Chain of custody audit'].map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="h-1.5 w-1.5 rounded-full bg-indigo-500/60" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="flex items-center gap-2 text-sm font-semibold text-indigo-600 group-hover:gap-3 transition-all">
+                  Open File Movement
                   <ArrowRight className="h-4 w-4" />
                 </div>
               </div>

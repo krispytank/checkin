@@ -47,7 +47,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
 // POST /api/stations
 router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
   try {
-    const { name, latitude, longitude, radiusMeters } = req.body;
+    const { name, latitude, longitude, radiusMeters, address, city, phoneNumber } = req.body;
 
     // Validation
     const _err = validateRequired(name, 'Name'); if (_err) {
@@ -100,6 +100,10 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),
       radiusMeters: parseInt(radiusMeters),
+      address: address?.trim() || null,
+      city: city?.trim() || null,
+      phoneNumber: phoneNumber?.trim() || null,
+      isActive: true,
       createdAt: new Date(),
     };
 
@@ -118,7 +122,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
 router.put('/:id', authenticate, authorize('admin'), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, latitude, longitude, radiusMeters } = req.body;
+    const { name, latitude, longitude, radiusMeters, address, city, phoneNumber, isActive } = req.body;
 
     const db = getDB();
 
@@ -179,6 +183,11 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res, next) => {
       }
       updateData.radiusMeters = parseInt(radiusMeters);
     }
+
+    if (address !== undefined) updateData.address = address?.trim() || null;
+    if (city !== undefined) updateData.city = city?.trim() || null;
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber?.trim() || null;
+    if (isActive !== undefined) updateData.isActive = isActive;
 
     await db.collection('stations').updateOne(
       { _id: new ObjectId(id) },

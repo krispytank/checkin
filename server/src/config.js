@@ -37,6 +37,8 @@ const config = {
     ATTENDANCE: 'attendance',
     EQUIPMENT: 'equipment',
     FLEET: 'fleet',
+    FILE_MOVEMENT: 'fileMovement',
+    AUDIT: 'audit',
   },
 
   // Module-Specific Roles
@@ -44,6 +46,18 @@ const config = {
     attendance: ['admin', 'supervisor', 'user'],
     equipment: ['admin', 'booker', 'user'],
     fleet: ['admin', 'manager', 'driver', 'user'],
+    fileMovement: [
+      'admin',
+      'registry_supervisor',
+      'registry_officer',
+      'court_clerk',
+      'judicial_officer',
+      'judge',
+      'strong_room_officer',
+      'auditor',
+      'user',
+    ],
+    audit: ['admin', 'auditor'],
   },
 
   // Module-Specific Permissions
@@ -80,6 +94,26 @@ const config = {
       'manage_parking',
       'scan_vehicle',
       'export_qr',
+      'manage_visitor_parking',
+      'manage_maintenance',
+      'view_fleet_reports',
+    ],
+    fileMovement: [
+      'manage_case_files',
+      'view_case_files',
+      'create_file_movement',
+      'approve_file_movement',
+      'manage_strong_room',
+      'request_file',
+      'return_file',
+      'view_file_tracking',
+      'view_file_reports',
+      'manage_registries',
+    ],
+    audit: [
+      'view_audit_logs',
+      'export_audit_logs',
+      'purge_audit_logs',
     ],
   },
 

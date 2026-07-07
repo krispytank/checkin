@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { messagesAPI, usersAPI, notificationsAPI } from '../../lib/api.js';
+import { Link } from 'wouter';
+import { messagesAPI, usersAPI } from '../../lib/api.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { formatDateTime, cn } from '../../lib/utils.js';
 import { 
-  Mail, Send, Inbox, Trash2, Eye, EyeOff, Loader2, 
-  AlertCircle, Bell, MessageSquare, Plus, X, Settings 
+  Mail, Send, Inbox, Trash2, EyeOff, Loader2, 
+  AlertCircle, Bell, MessageSquare, Plus, X, Settings, ExternalLink 
 } from 'lucide-react';
 import NotificationSettings from '../../components/NotificationSettings.jsx';
 
@@ -239,6 +240,13 @@ export default function MessagesPage() {
               </div>
               <div className="p-6">
                 <p className="whitespace-pre-wrap">{selectedMessage.content}</p>
+                {selectedMessage.link && (
+                  <Link href={selectedMessage.link}
+                    className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                    <ExternalLink className="h-4 w-4" />
+                    Go to request
+                  </Link>
+                )}
               </div>
             </div>
           ) : (
@@ -271,7 +279,6 @@ export default function MessagesPage() {
 }
 
 function ComposeModal({ users, onClose, onSuccess }) {
-  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     receiverId: '',
     type: 'message',

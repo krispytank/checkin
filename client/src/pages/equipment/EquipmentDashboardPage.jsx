@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { equipmentAPI, bookingsAPI } from '../../lib/api.js';
-import { Package, Plus, Clock, CheckCircle, Truck, RotateCcw, Loader2, Monitor, Video, Presentation, PackageCheck } from 'lucide-react';
+import { Package, Clock, CheckCircle, Truck, RotateCcw, Loader2, Monitor, Video, Presentation, PackageCheck } from 'lucide-react';
 
 const STATUS_CONFIG = {
   pending: { label: 'Pending', color: 'text-yellow-600', bg: 'bg-yellow-100', icon: Clock },
@@ -19,7 +19,7 @@ const TYPE_ICONS = {
 };
 
 export default function EquipmentDashboardPage() {
-  const { data: equipData, isLoading: equipLoading } = useQuery({
+  const { data: equipData } = useQuery({
     queryKey: ['equipment'],
     queryFn: async () => {
       const res = await equipmentAPI.list({ limit: 500 });
@@ -61,15 +61,9 @@ export default function EquipmentDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Equipment Dashboard</h1>
-          <p className="text-muted-foreground">Monitor equipment status and bookings</p>
-        </div>
-        <Link href="/equipment/book"
-          className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
-          <Plus className="h-4 w-4" /> Book Equipment
-        </Link>
+      <div>
+        <h1 className="text-2xl font-bold">Equipment Dashboard</h1>
+        <p className="text-muted-foreground">Monitor equipment status and bookings</p>
       </div>
 
       {/* Overall Stats */}

@@ -180,12 +180,13 @@ export default function ReportsPage() {
                     </Pie>
                     <Tooltip
                       contentStyle={{
-                        background: 'var(--card)',
+                        background: 'var(--popover)',
                         border: '1px solid var(--border)',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                         fontSize: '12px',
                         padding: '8px 12px',
+                        color: 'hsl(var(--popover-foreground))',
                       }}
                       formatter={(v) => [`${v} entries`, undefined]}
                     />
@@ -242,12 +243,13 @@ export default function ReportsPage() {
                     />
                     <Tooltip
                       contentStyle={{
-                        background: 'var(--card)',
+                        background: 'var(--popover)',
                         border: '1px solid var(--border)',
-                        borderRadius: '12px',
-                        boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                        borderRadius: '8px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                         fontSize: '12px',
                         padding: '8px 12px',
+                        color: 'hsl(var(--popover-foreground))',
                       }}
                       labelFormatter={(v) => new Date(v).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     />

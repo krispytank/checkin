@@ -4,6 +4,7 @@ import MainLayout from '../layouts/MainLayout.jsx';
 import LoginPage from '../pages/LoginPage.jsx';
 import ForgotPasswordPage from '../pages/ForgotPasswordPage.jsx';
 import LandingPage from '../pages/LandingPage.jsx';
+import UnifiedDashboardPage from '../pages/dashboard/UnifiedDashboardPage.jsx';
 import DashboardPage from '../pages/attendance/DashboardPage.jsx';
 import TeamPage from '../pages/attendance/TeamPage.jsx';
 import ReportsPage from '../pages/attendance/ReportsPage.jsx';
@@ -27,6 +28,14 @@ import VehiclesPage from '../pages/fleet/VehiclesPage.jsx';
 import TripsPage from '../pages/fleet/TripsPage.jsx';
 import ParkingPage from '../pages/fleet/ParkingPage.jsx';
 import CheckInOutPage from '../pages/fleet/CheckInOutPage.jsx';
+import AdminAuditLogsPage from '../pages/admin/AdminAuditLogsPage.jsx';
+import AdminRegistriesPage from '../pages/admin/AdminRegistriesPage.jsx';
+import FileMovementDashboardPage from '../pages/fileMovement/FileMovementDashboardPage.jsx';
+import CaseFilesPage from '../pages/fileMovement/CaseFilesPage.jsx';
+import FileRequestsPage from '../pages/fileMovement/FileRequestsPage.jsx';
+import StrongRoomPage from '../pages/fileMovement/StrongRoomPage.jsx';
+import FleetReportsPage from '../pages/fleet/FleetReportsPage.jsx';
+import FileReportsPage from '../pages/fileMovement/FileReportsPage.jsx';
 import NotFoundPage from '../pages/NotFoundPage.jsx';
 
 function ProtectedRoute({ children, requiredRoles = [] }) {
@@ -94,6 +103,15 @@ export default function AppRouter() {
         <ProtectedRoute>
           <MainLayout>
             <ProfilePage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Unified Dashboard */}
+      <Route path="/dashboard">
+        <ProtectedRoute>
+          <MainLayout>
+            <UnifiedDashboardPage />
           </MainLayout>
         </ProtectedRoute>
       </Route>
@@ -194,8 +212,15 @@ export default function AppRouter() {
           </MainLayout>
         </ProtectedRoute>
       </Route>
+      <Route path="/fleet/reports">
+        <ProtectedRoute>
+          <MainLayout module="fleet">
+            <FleetReportsPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
 
-      {/* Admin Routes */}
+      {/* File Movement Module Routes */}
       <Route path="/admin/users">
         <ProtectedRoute requiredRoles={['admin']}>
           <MainLayout>
@@ -260,6 +285,61 @@ export default function AppRouter() {
         <ProtectedRoute requiredRoles={['admin']}>
           <MainLayout>
             <AdminFleetParkingPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* File Movement Module Routes */}
+      <Route path="/file-movement/dashboard">
+        <ProtectedRoute>
+          <MainLayout module="fileMovement">
+            <FileMovementDashboardPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/file-movement/case-files">
+        <ProtectedRoute>
+          <MainLayout module="fileMovement">
+            <CaseFilesPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/file-movement/requests">
+        <ProtectedRoute>
+          <MainLayout module="fileMovement">
+            <FileRequestsPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/file-movement/strong-room">
+        <ProtectedRoute>
+          <MainLayout module="fileMovement">
+            <StrongRoomPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+      <Route path="/file-movement/reports">
+        <ProtectedRoute>
+          <MainLayout module="fileMovement">
+            <FileReportsPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* File Movement Admin Routes */}
+      <Route path="/admin/file-movement/registries">
+        <ProtectedRoute requiredRoles={['admin']}>
+          <MainLayout>
+            <AdminRegistriesPage />
+          </MainLayout>
+        </ProtectedRoute>
+      </Route>
+
+      {/* Audit Logs Admin Route */}
+      <Route path="/admin/audit-logs">
+        <ProtectedRoute requiredRoles={['admin']}>
+          <MainLayout>
+            <AdminAuditLogsPage />
           </MainLayout>
         </ProtectedRoute>
       </Route>
