@@ -3,7 +3,7 @@ import { Link, useLocation } from 'wouter';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useTheme } from '../contexts/ThemeContext.jsx';
 import {
-  Users, FileText, Calendar, MessageSquare,
+  Users, FileText, Calendar,
   Settings, LogOut, X, Sun, Moon, ChevronDown,
   Home, Clock, MapPin, Briefcase, Building, Car, Truck,
   Package, MonitorCog, QrCode, PanelLeftClose, PanelLeft,
@@ -278,30 +278,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
   });
 
   const toggleSection = useCallback((key) => {
-    setOpenSections(prev => {
-      const topLevel = ['attendance', 'equipment', 'fleet', 'fileMovement', 'admin'];
-      const adminGroups = ['adminUsers', 'adminAttendance', 'adminEquipment', 'adminFleet', 'adminFileMovement', 'adminAudit'];
-
-      if (topLevel.includes(key)) {
-        // Accordion: close all other top-level sections
-        const next = {};
-        for (const k of topLevel) {
-          next[k] = k === key ? !prev[k] : false;
-        }
-        return { ...prev, ...next };
-      }
-
-      if (adminGroups.includes(key)) {
-        // Accordion: close all other admin sub-groups
-        const next = {};
-        for (const k of adminGroups) {
-          next[k] = k === key ? !prev[k] : false;
-        }
-        return { ...prev, ...next };
-      }
-
-      return { ...prev, [key]: !prev[key] };
-    });
+    setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
   const isAttendanceChild = timeAttendanceChildren.some(
@@ -316,30 +293,22 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
     c => !c.roles || c.roles.includes(user?.role)
   );
 
-  // Auto-expand sections containing the active route (accordion: only one open)
+  // Auto-expand sections containing the active route
   useEffect(() => {
     setOpenSections(prev => {
-      const topLevel = ['attendance', 'equipment', 'fleet', 'admin'];
       const next = { ...prev };
 
-      // Open only the top-level section containing the active route
-      if (isAttendanceChild) {
-        for (const k of topLevel) next[k] = k === 'attendance';
-      } else if (isEquipmentChild) {
-        for (const k of topLevel) next[k] = k === 'equipment';
-      } else if (isFleetChild) {
-        for (const k of topLevel) next[k] = k === 'fleet';
-      } else if (isFileMovementChild) {
-        for (const k of topLevel) next[k] = k === 'fileMovement';
-      } else if (isAdminChild) {
-        for (const k of topLevel) next[k] = k === 'admin';
-
-        // Also auto-expand the relevant admin sub-group (accordion)
-        const groupKeys = ['adminUsers', 'adminAttendance', 'adminEquipment', 'adminFleet', 'adminFileMovement', 'adminAudit'];
+      if (isAttendanceChild) next.attendance = true;
+      else if (isEquipmentChild) next.equipment = true;
+      else if (isFleetChild) next.fleet = true;
+      else if (isFileMovementChild) next.fileMovement = true;
+      else if (isAdminChild) {
+        next.admin = true;
+        // Also auto-expand the relevant admin sub-group
         for (let i = 0; i < adminNavigation.length; i++) {
           const isActive = adminNavigation[i].children.some(c => location === c.href);
-          for (const k of groupKeys) {
-            if (k === groupKeys[i]) next[k] = isActive;
+          if (isActive) {
+            next[`admin${adminNavigation[i].name}`] = true;
           }
         }
       }
