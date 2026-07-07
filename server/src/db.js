@@ -85,16 +85,16 @@ async function createSchemas(database) {
 
 async function seedDefaultAdmin(database) {
   try {
-    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL || 'admin@example.com';
-    const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD || 'changeme123';
+    const adminEmail = process.env.DEFAULT_ADMIN_EMAIL;
+    const adminPassword = process.env.DEFAULT_ADMIN_PASSWORD;
     const hashedPassword = await bcrypt.hash(adminPassword, 12);
 
     const existingAdmin = await database.collection('users').findOne({ email: adminEmail });
 
     if (!existingAdmin) {
       await database.collection('users').insertOne({
-        employeeId: process.env.DEFAULT_ADMIN_ID || '001',
-        name: process.env.DEFAULT_ADMIN_NAME || 'Alex Johnson',
+        employeeId: process.env.DEFAULT_ADMIN_ID,
+        name: process.env.DEFAULT_ADMIN_NAME,
         email: adminEmail,
         password: hashedPassword,
         role: 'admin',
