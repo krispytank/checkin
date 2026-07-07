@@ -17,6 +17,8 @@ export default {
         isActive: { bsonType: 'bool' },
         tokenVersion: { bsonType: 'int' },
         moduleAccess: { bsonType: 'object' },
+        failedLoginAttempts: { bsonType: 'int' },
+        lockedUntil: { bsonType: ['date', 'null'] },
         createdAt: { bsonType: 'date' },
         updatedAt: { bsonType: 'date' },
       },

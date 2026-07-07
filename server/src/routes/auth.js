@@ -9,6 +9,9 @@ import { sendPasswordResetEmail } from '../utils/mail.js';
 
 const router = Router();
 
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
 function toTitleCase(str) {
   return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.slice(1).toLowerCase());
 }
@@ -46,14 +49,44 @@ router.post('/login', async (req, res, next) => {
       });
     }
 
+    // Check if account is locked
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const remainingMs = user.lockedUntil.getTime() - Date.now();
+      const remainingMin = Math.ceil(remainingMs / 60000);
+      return res.status(423).json({ 
+        success: false, 
+        message: `Account locked due to too many failed attempts. Try again in ${remainingMin} minute${remainingMin > 1 ? 's' : ''}.` 
+      });
+    }
+
     // Check password
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      // Increment failed attempts
+      const failedAttempts = (user.failedLoginAttempts || 0) + 1;
+      const updateData = { failedLoginAttempts: failedAttempts, updatedAt: new Date() };
+
+      // Lock account if max attempts reached
+      if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+        updateData.lockedUntil = new Date(Date.now() + LOCKOUT_DURATION_MS);
+      }
+
+      await db.collection('users').updateOne(
+        { _id: user._id },
+        { $set: updateData }
+      );
+
       return res.status(401).json({ 
         success: false, 
         message: 'Invalid email or password' 
       });
     }
+
+    // Reset failed attempts on successful login
+    await db.collection('users').updateOne(
+      { _id: user._id },
+      { $set: { failedLoginAttempts: 0, lockedUntil: null, updatedAt: new Date() } }
+    );
 
     // Generate token
     const token = generateToken(user, 'auth');
