@@ -174,7 +174,7 @@ describe('Fleet - Trips', () => {
 
   it('POST / - creates trip with auto-generated tripId', async () => {
     const insertOne = vi.fn().mockResolvedValue({ insertedId: new ObjectId() });
-    mockDb({ trips: { insertOne, findOne: vi.fn().mockResolvedValue(null) }, vehicles: { findOne: vi.fn().mockResolvedValue(null) } });
+    mockDb({ trips: { insertOne, findOne: vi.fn().mockResolvedValue(null) }, vehicles: { findOne: vi.fn().mockResolvedValue(null) }, users: { findOne: vi.fn().mockResolvedValue(null), find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }) } });
     const { req, res, next } = makeReqRes({ body: { destination: 'Lagos', purpose: 'Meeting', departureDate: '2025-01-01T10:00:00Z' } });
     const { default: router } = await import('../trips.js');
     const route = router.stack.find(r => r.route?.path === '/' && r.route?.methods?.post);

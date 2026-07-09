@@ -10,6 +10,7 @@ build/
 
 # Environment variables
 .env
+.env.production
 .env.local
 .env.development.local
 .env.test.local
@@ -43,3 +44,11 @@ coverage/
 *.log
 temp/
 .tmp/
+
+# Uploads
+server/uploads/*
+!server/uploads/.gitkeep
+
+# Logs
+logs/
+*.log

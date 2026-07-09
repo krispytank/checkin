@@ -12,7 +12,7 @@ set -euo pipefail
 #   ./deploy.sh --version    Print current version
 # ============================================
 
-APP_DIR="/opt/attendtrack"
+APP_DIR="/opt/mahakama-access"
 VERSION_FILE="$APP_DIR/VERSION"
 LOG_DIR="$APP_DIR/logs"
 DEPLOY_LOG="$LOG_DIR/deploy-$(date +%Y%m%d-%H%M%S).log"

@@ -3,7 +3,14 @@ import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
 import schemas from './schemas/index.js';
 
-dotenv.config();
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const envFile = process.env.NODE_ENV === 'production' ? '../.env.production' : '../.env';
+dotenv.config({ path: new URL(envFile, import.meta.url).pathname });
 
 const MONGODB_URI = process.env.MONGODB_URI;
 const MONGODB_DB = process.env.MONGODB_DB;
@@ -16,7 +23,10 @@ export async function connectDB() {
     if (db) return db;
 
     client = new MongoClient(MONGODB_URI, {
-  serverSelectionTimeoutMS: 10000,});
+      serverSelectionTimeoutMS: 10000,
+      retryWrites: true,
+      retryReads: true,
+    });
     await client.connect();
     
     db = client.db(MONGODB_DB);

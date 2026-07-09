@@ -91,7 +91,7 @@ describe('Auth - Login', () => {
 
   it('POST /login - wrong password returns same error (no email enum)', async () => {
     const hashedPw = await bcrypt.hash('Correct123!', 12);
-    mockDb({ users: { findOne: vi.fn().mockResolvedValue({ _id: new ObjectId(), email: 'test@test.com', password: hashedPw, isActive: true, role: 'user' }) } });
+    mockDb({ users: { findOne: vi.fn().mockResolvedValue({ _id: new ObjectId(), email: 'test@test.com', password: hashedPw, isActive: true, role: 'user' }), updateOne: vi.fn() } });
     const { req, res, next } = reqRes({ body: { email: 'test@test.com', password: 'Wrong123!' } });
     const { default: router } = await import('../auth.js');
     const route = router.stack.find(r => r.route?.path === '/login' && r.route?.methods?.post);
@@ -113,7 +113,7 @@ describe('Auth - Login', () => {
 
   it('POST /login - success returns token and user data', async () => {
     const hashedPw = await bcrypt.hash('Test123!', 12);
-    mockDb({ users: { findOne: vi.fn().mockResolvedValue({ _id: new ObjectId(), email: 'test@test.com', password: hashedPw, isActive: true, role: 'admin' }) } });
+    mockDb({ users: { findOne: vi.fn().mockResolvedValue({ _id: new ObjectId(), email: 'test@test.com', password: hashedPw, isActive: true, role: 'admin' }), updateOne: vi.fn() } });
     const { req, res, next } = reqRes({ body: { email: 'test@test.com', password: 'Test123!' } });
     const { default: router } = await import('../auth.js');
     const route = router.stack.find(r => r.route?.path === '/login' && r.route?.methods?.post);

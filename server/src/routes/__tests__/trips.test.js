@@ -55,6 +55,7 @@ describe('Trips API Error Handling', () => {
             })),
           })),
         })),
+        toArray: vi.fn().mockResolvedValue([]),
       })),
       countDocuments: vi.fn().mockResolvedValue(0),
       insertOne: vi.fn(),

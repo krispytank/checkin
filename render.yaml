@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: mahakama-access
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: mahakama_access
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 24h
+      - key: CLIENT_URL
+        value: https://mahakama-access.onrender.com
+      - key: DEFAULT_ADMIN_EMAIL
+        sync: false
+      - key: DEFAULT_ADMIN_PASSWORD
+        value: Rosh@31059
+      - key: DEFAULT_ADMIN_ID
+        value: "001"
+      - key: DEFAULT_ADMIN_NAME
+        value: Alex Johnson
+      - key: SMTP_SERVICE
+        value: gmail
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        value: noreply@mahakamaaccess.com
+    healthCheckPath: /api/health
+    autoDeploy: true

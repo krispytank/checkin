@@ -5,21 +5,35 @@ let transporter = null;
 function getTransporter() {
   if (transporter) return transporter;
 
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
+  const { SMTP_SERVICE, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS } = process.env;
 
-  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+  if (!SMTP_USER || !SMTP_PASS) {
     return null;
   }
 
-  transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: parseInt(SMTP_PORT || '587'),
-    secure: parseInt(SMTP_PORT || '587') === 465,
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-  });
+  // Gmail or other named service (e.g., "gmail", "outlook", "yahoo")
+  if (SMTP_SERVICE) {
+    transporter = nodemailer.createTransport({
+      service: SMTP_SERVICE,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+  } else if (SMTP_HOST) {
+    // Custom SMTP host
+    transporter = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: parseInt(SMTP_PORT || '587'),
+      secure: parseInt(SMTP_PORT || '587') === 465,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+  } else {
+    return null;
+  }
 
   return transporter;
 }
@@ -60,7 +74,7 @@ export async function sendPasswordResetEmail(email, resetToken) {
 
   try {
     await transport.sendMail({
-      from: process.env.EMAIL_FROM || 'noreply@attendtrack.com',
+      from: process.env.EMAIL_FROM || 'noreply@mahakamaaccess.com',
       to: email,
       subject: 'Mahakama Access — Password Reset',
       html,

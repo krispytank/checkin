@@ -5,7 +5,7 @@ const APP_DIR = process.env.APP_DIR || path.resolve(__dirname);
 module.exports = {
   apps: [
     {
-      name: 'attendtrack-server',
+      name: 'mahakama-access-server',
       script: 'server/src/index.js',
       cwd: APP_DIR,
       instances: 1,

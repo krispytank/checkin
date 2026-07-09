@@ -232,7 +232,7 @@ describe('Bookings', () => {
     mockDb({
       bookings: { findOne: vi.fn().mockResolvedValue(null), insertOne },
       equipment: { updateMany: vi.fn(), find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }) },
-      users: { findOne: vi.fn().mockResolvedValue(null) },
+      users: { findOne: vi.fn().mockResolvedValue(null), find: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }) },
       cases: { findOne: vi.fn().mockResolvedValue(null) },
     });
     const { req, res, next } = reqRes({ body: { caseId: new ObjectId().toString(), equipmentIds: [new ObjectId().toString()], startDate: '2025-01-01', endDate: '2025-01-02' } });

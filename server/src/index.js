@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
-import { connectDB } from './db.js';
+import { connectDB, getDB, closeDB } from './db.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import recordRoutes from './routes/records.js';
@@ -40,8 +40,9 @@ import dashboardRoutes from './routes/dashboard.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Load environment variables
-dotenv.config({ path: new URL('../.env', import.meta.url).pathname });
+// Load environment variables based on NODE_ENV
+const envFile = process.env.NODE_ENV === 'production' ? '../.env.production' : '../.env';
+dotenv.config({ path: new URL(envFile, import.meta.url).pathname });
 
 if (process.env.NODE_ENV === 'production' && !process.env.CLIENT_URL) {
   throw new Error('FATAL: CLIENT_URL environment variable is required in production');
@@ -51,11 +52,30 @@ if (process.env.NODE_ENV === 'production' && !process.env.CLIENT_URL) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust first proxy (required behind Render's reverse proxy)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Connect to MongoDB
 await connectDB();
 
 // Security Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: process.env.NODE_ENV === 'production' ? {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'"],
+      frameSrc: ["'none'"],
+      objectSrc: ["'none'"],
+    },
+  } : undefined,
+  crossOriginEmbedderPolicy: process.env.NODE_ENV === 'production',
+}));
 app.use(mongoSanitize());
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -116,9 +136,19 @@ app.use('/api/dashboard', dashboardRoutes);
 // Serve uploaded files
 app.use('/uploads', express.static(join(__dirname, '../uploads')));
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+// Health check endpoint — verifies MongoDB connectivity
+app.get('/api/health', async (req, res) => {
+  try {
+    const db = getDB();
+    await db.command({ ping: 1 });
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  } catch (error) {
+    res.status(503).json({
+      status: 'error',
+      message: 'Database unreachable',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Version endpoint
@@ -169,9 +199,29 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
 });
+
+// Graceful shutdown
+const shutdown = async (signal) => {
+  console.log(`\n${signal} received. Shutting down gracefully...`);
+  server.close(async () => {
+    console.log('HTTP server closed.');
+    await closeDB();
+    console.log('Database connection closed.');
+    process.exit(0);
+  });
+
+  // Force shutdown after 30s if graceful shutdown hangs
+  setTimeout(() => {
+    console.error('Forced shutdown after timeout.');
+    process.exit(1);
+  }, 30000);
+};
+
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 export default app;
