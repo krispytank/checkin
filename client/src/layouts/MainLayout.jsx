@@ -35,7 +35,7 @@ export default function MainLayout({ children }) {
   const [messagesOpen, setMessagesOpen] = useState(false);
   const messagesRef = useRef(null);
   const [location] = useLocation();
-  const { logout, hasRole } = useAuth();
+  const { logout, hasRole, hasModuleRole } = useAuth();
 
   const handleToggleCollapse = useCallback(() => {
     setCollapsed(prev => {
@@ -182,6 +182,7 @@ export default function MainLayout({ children }) {
                         <MoreMenuContent
                           location={location}
                           hasRole={hasRole}
+                          hasModuleRole={hasModuleRole}
                           onClose={() => setMoreMenuOpen(false)}
                           onLogout={handleLogout}
                         />
@@ -284,127 +285,147 @@ function MessagesDropdown({ onClose }) {
   );
 }
 
-function MoreMenuContent({ location, hasRole, onClose, onLogout }) {
+function MoreMenuContent({ location, hasRole, hasModuleRole, onClose, onLogout }) {
+  const filterByRole = (items, module) => items.filter(item => !item.roles || item.roles.some(r => hasModuleRole(module, r)));
+
+  const attendanceItems = filterByRole([
+    { name: 'Dashboard', href: '/attendance/dashboard', icon: Clock },
+    { name: 'Team', href: '/attendance/team', icon: Users, roles: ['admin', 'supervisor'] },
+    { name: 'Shifts', href: '/attendance/shifts', icon: Calendar, roles: ['admin', 'supervisor'] },
+    { name: 'Reports', href: '/attendance/reports', icon: FileText, roles: ['admin', 'supervisor'] },
+  ], 'attendance');
+
+  const equipmentItems = filterByRole([
+    { name: 'Dashboard', href: '/equipment/dashboard', icon: Clock },
+    { name: 'Book Equipment', href: '/equipment/book', icon: Package },
+    { name: 'Manage Bookings', href: '/equipment/manage', icon: FileText, roles: ['admin', 'supervisor', 'manager'] },
+  ], 'equipment');
+
+  const fleetItems = filterByRole([
+    { name: 'Dashboard', href: '/fleet/dashboard', icon: Clock },
+    { name: 'Vehicles', href: '/fleet/vehicles', icon: Car, roles: ['admin', 'supervisor', 'manager'] },
+    { name: 'Trips', href: '/fleet/trips', icon: Car },
+    { name: 'Parking', href: '/fleet/parking', icon: MapPin },
+    { name: 'Check In/Out', href: '/fleet/checkin', icon: FileText },
+    { name: 'Reports', href: '/fleet/reports', icon: FileText, roles: ['admin', 'supervisor', 'manager'] },
+  ], 'fleet');
+
+  const fileMovementItems = filterByRole([
+    { name: 'Dashboard', href: '/file-movement/dashboard', icon: Clock },
+    { name: 'Case Files', href: '/file-movement/case-files', icon: FolderOpen },
+    { name: 'File Requests', href: '/file-movement/requests', icon: FileText },
+    { name: 'Strong Room', href: '/file-movement/strong-room', icon: FolderOpen, roles: ['admin', 'supervisor'] },
+  ], 'fileMovement');
+
   return (
     <>
       {/* Time Attendance */}
-      <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Time Attendance
-      </div>
-      {[
-        { name: 'Dashboard', href: '/attendance/dashboard', icon: Clock },
-        { name: 'Team', href: '/attendance/team', icon: Users },
-        { name: 'Shifts', href: '/attendance/shifts', icon: Calendar },
-        { name: 'Reports', href: '/attendance/reports', icon: FileText },
-      ].map((item) => {
-        const NavIcon = item.icon;
-        const active = location === item.href;
-        return (
-          <Link
-            key={item.name}
-            href={item.href}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors",
-              active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-            )}
-            onClick={onClose}
-          >
-            <NavIcon className="h-4 w-4" />
-            {item.name}
-          </Link>
-        );
-      })}
+      {attendanceItems.length > 0 && (
+        <>
+          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Time Attendance
+          </div>
+          {attendanceItems.map((item) => {
+            const NavIcon = item.icon;
+            const active = location === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors",
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+                onClick={onClose}
+              >
+                <NavIcon className="h-4 w-4" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </>
+      )}
 
       {/* Equipment */}
-      <div className="border-t mt-1 pt-1">
-        <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Equipment Booking
+      {equipmentItems.length > 0 && (
+        <div className="border-t mt-1 pt-1">
+          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Equipment Booking
+          </div>
+          {equipmentItems.map((item) => {
+            const NavIcon = item.icon;
+            const active = location === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors",
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+                onClick={onClose}
+              >
+                <NavIcon className="h-4 w-4" />
+                {item.name}
+              </Link>
+            );
+          })}
         </div>
-        {[
-          { name: 'Dashboard', href: '/equipment/dashboard', icon: Clock },
-          { name: 'Book Equipment', href: '/equipment/book', icon: Package },
-          { name: 'Manage Bookings', href: '/equipment/manage', icon: FileText },
-        ].map((item) => {
-          const NavIcon = item.icon;
-          const active = location === item.href;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors",
-                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-              )}
-              onClick={onClose}
-            >
-              <NavIcon className="h-4 w-4" />
-              {item.name}
-            </Link>
-          );
-        })}
-      </div>
+      )}
 
       {/* Fleet */}
-      <div className="border-t mt-1 pt-1">
-        <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          Fleet Management
+      {fleetItems.length > 0 && (
+        <div className="border-t mt-1 pt-1">
+          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Fleet Management
+          </div>
+          {fleetItems.map((item) => {
+            const NavIcon = item.icon;
+            const active = location === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors",
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+                onClick={onClose}
+              >
+                <NavIcon className="h-4 w-4" />
+                {item.name}
+              </Link>
+            );
+          })}
         </div>
-        {[
-          { name: 'Dashboard', href: '/fleet/dashboard', icon: Clock },
-          { name: 'Vehicles', href: '/fleet/vehicles', icon: Car },
-          { name: 'Trips', href: '/fleet/trips', icon: Car },
-          { name: 'Parking', href: '/fleet/parking', icon: MapPin },
-          { name: 'Check In/Out', href: '/fleet/checkin', icon: FileText },
-          { name: 'Reports', href: '/fleet/reports', icon: FileText },
-        ].map((item) => {
-          const NavIcon = item.icon;
-          const active = location === item.href;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors",
-                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-              )}
-              onClick={onClose}
-            >
-              <NavIcon className="h-4 w-4" />
-              {item.name}
-            </Link>
-          );
-        })}
-      </div>
+      )}
 
       {/* File Movement */}
-      <div className="border-t mt-1 pt-1">
-        <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-          File Movement
+      {fileMovementItems.length > 0 && (
+        <div className="border-t mt-1 pt-1">
+          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            File Movement
+          </div>
+          {fileMovementItems.map((item) => {
+            const NavIcon = item.icon;
+            const active = location === item.href;
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors",
+                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
+                )}
+                onClick={onClose}
+              >
+                <NavIcon className="h-4 w-4" />
+                {item.name}
+              </Link>
+            );
+          })}
         </div>
-        {[
-          { name: 'Dashboard', href: '/file-movement/dashboard', icon: Clock },
-          { name: 'Case Files', href: '/file-movement/case-files', icon: FolderOpen },
-          { name: 'File Requests', href: '/file-movement/requests', icon: FileText },
-          { name: 'Strong Room', href: '/file-movement/strong-room', icon: FolderOpen },
-        ].map((item) => {
-          const NavIcon = item.icon;
-          const active = location === item.href;
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors",
-                active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-              )}
-              onClick={onClose}
-            >
-              <NavIcon className="h-4 w-4" />
-              {item.name}
-            </Link>
-          );
-        })}
-      </div>
+      )}
 
       {/* Admin */}
       {hasRole('admin') && (

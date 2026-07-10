@@ -16,30 +16,30 @@ const timeAttendanceChildren = [
   { name: 'Dashboard', href: '/attendance/dashboard', icon: Clock },
   { name: 'Team', href: '/attendance/team', icon: Users, roles: ['admin', 'supervisor'] },
   { name: 'Shifts', href: '/attendance/shifts', icon: Calendar, roles: ['admin', 'supervisor'] },
-  { name: 'Reports', href: '/attendance/reports', icon: FileText },
+  { name: 'Reports', href: '/attendance/reports', icon: FileText, roles: ['admin', 'supervisor'] },
 ];
 
 const fleetNavigation = [
   { name: 'Dashboard', href: '/fleet/dashboard', icon: Clock },
-  { name: 'Vehicles', href: '/fleet/vehicles', icon: Car },
+  { name: 'Vehicles', href: '/fleet/vehicles', icon: Car, roles: ['admin', 'supervisor', 'manager'] },
   { name: 'Trips', href: '/fleet/trips', icon: Truck },
   { name: 'Parking', href: '/fleet/parking', icon: MapPin },
   { name: 'Check In/Out', href: '/fleet/checkin', icon: QrCode },
-  { name: 'Reports', href: '/fleet/reports', icon: FileText },
+  { name: 'Reports', href: '/fleet/reports', icon: FileText, roles: ['admin', 'supervisor', 'manager'] },
 ];
 
 const equipmentNavigation = [
   { name: 'Dashboard', href: '/equipment/dashboard', icon: Clock },
   { name: 'Book Equipment', href: '/equipment/book', icon: Package },
-  { name: 'Manage Bookings', href: '/equipment/manage', icon: FileText },
+  { name: 'Manage Bookings', href: '/equipment/manage', icon: FileText, roles: ['admin', 'supervisor', 'manager'] },
 ];
 
 const fileMovementNavigation = [
   { name: 'Dashboard', href: '/file-movement/dashboard', icon: Clock },
   { name: 'Case Files', href: '/file-movement/case-files', icon: FolderOpen },
   { name: 'File Requests', href: '/file-movement/requests', icon: FileText },
-  { name: 'Strong Room', href: '/file-movement/strong-room', icon: Shield },
-  { name: 'Reports', href: '/file-movement/reports', icon: FileText },
+  { name: 'Strong Room', href: '/file-movement/strong-room', icon: Shield, roles: ['admin', 'supervisor'] },
+  { name: 'Reports', href: '/file-movement/reports', icon: FileText, roles: ['admin', 'supervisor'] },
 ];
 
 const adminNavigation = [
@@ -259,7 +259,7 @@ function AdminGroup({ group, isOpen, onToggle, location, collapsed, onClick }) {
 
 export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMobileClose }) {
   const [location] = useLocation();
-  const { user, logout, hasRole } = useAuth();
+  const { user, logout, hasRole, hasModuleAccess } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const drawerRef = useRef(null);
 
@@ -281,17 +281,23 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
     setOpenSections(prev => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  const isAttendanceChild = timeAttendanceChildren.some(
-    c => location === c.href && (!c.roles || c.roles.includes(user?.role))
-  );
-  const isEquipmentChild = equipmentNavigation.some(c => location === c.href);
-  const isFleetChild = fleetNavigation.some(c => location === c.href);
-  const isFileMovementChild = fileMovementNavigation.some(c => location === c.href);
-  const isAdminChild = adminNavigation.some(g => g.children.some(c => location === c.href));
+  const getModuleRole = (module) => user?.moduleAccess?.[module]?.role || null;
 
-  const filteredAttendance = timeAttendanceChildren.filter(
-    c => !c.roles || c.roles.includes(user?.role)
-  );
+  const filterByModuleRole = (items, module) => {
+    const moduleRole = getModuleRole(module);
+    return items.filter(c => !c.roles || c.roles.includes(moduleRole) || c.roles.includes(user?.role));
+  };
+
+  const filteredAttendance = filterByModuleRole(timeAttendanceChildren, 'attendance');
+  const filteredFleet = filterByModuleRole(fleetNavigation, 'fleet');
+  const filteredEquipment = filterByModuleRole(equipmentNavigation, 'equipment');
+  const filteredFileMovement = filterByModuleRole(fileMovementNavigation, 'fileMovement');
+
+  const isAttendanceChild = filteredAttendance.some(c => location === c.href);
+  const isEquipmentChild = filteredEquipment.some(c => location === c.href);
+  const isFleetChild = filteredFleet.some(c => location === c.href);
+  const isFileMovementChild = filteredFileMovement.some(c => location === c.href);
+  const isAdminChild = adminNavigation.some(g => g.children.some(c => location === c.href));
 
   // Auto-expand sections containing the active route
   useEffect(() => {
@@ -402,7 +408,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
         </div>
 
         {/* Time Attendance */}
-        {filteredAttendance.length > 0 && (
+        {hasModuleAccess('attendance') && filteredAttendance.length > 0 && (
           <CollapsibleSection
             label="Time Attendance"
             icon={Clock}
@@ -427,6 +433,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
         )}
 
         {/* Equipment Booking */}
+        {hasModuleAccess('equipment') && (
         <CollapsibleSection
           label="Equipment Booking"
           icon={Package}
@@ -435,7 +442,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
           active={isEquipmentChild}
           collapsed={collapsed}
         >
-          {equipmentNavigation.map((item) => (
+          {filteredEquipment.map((item) => (
             <NavLink
               key={item.name}
               href={item.href}
@@ -448,8 +455,10 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
             />
           ))}
         </CollapsibleSection>
+        )}
 
         {/* Fleet Management */}
+        {hasModuleAccess('fleet') && (
         <CollapsibleSection
           label="Fleet Management"
           icon={Car}
@@ -458,7 +467,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
           active={isFleetChild}
           collapsed={collapsed}
         >
-          {fleetNavigation.map((item) => (
+          {filteredFleet.map((item) => (
             <NavLink
               key={item.name}
               href={item.href}
@@ -471,8 +480,10 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
             />
           ))}
         </CollapsibleSection>
+        )}
 
         {/* File Movement */}
+        {hasModuleAccess('fileMovement') && (
         <CollapsibleSection
           label="File Movement"
           icon={FolderOpen}
@@ -481,7 +492,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
           active={isFileMovementChild}
           collapsed={collapsed}
         >
-          {fileMovementNavigation.map((item) => (
+          {filteredFileMovement.map((item) => (
             <NavLink
               key={item.name}
               href={item.href}
@@ -494,6 +505,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
             />
           ))}
         </CollapsibleSection>
+        )}
 
         {/* Admin */}
         {hasRole('admin') && (
@@ -663,7 +675,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
 
           <div className="my-2"><div className="h-px bg-border" /></div>
 
-          {filteredAttendance.length > 0 && (
+          {hasModuleAccess('attendance') && filteredAttendance.length > 0 && (
             <CollapsibleSection
               label="Time Attendance"
               icon={Clock}
@@ -687,6 +699,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
             </CollapsibleSection>
           )}
 
+          {hasModuleAccess('equipment') && (
           <CollapsibleSection
             label="Equipment Booking"
             icon={Package}
@@ -695,7 +708,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
             active={isEquipmentChild}
             collapsed={false}
           >
-            {equipmentNavigation.map((item) => (
+            {filteredEquipment.map((item) => (
               <NavLink
                 key={item.name}
                 href={item.href}
@@ -708,7 +721,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
               />
             ))}
           </CollapsibleSection>
+          )}
 
+          {hasModuleAccess('fleet') && (
           <CollapsibleSection
             label="Fleet Management"
             icon={Car}
@@ -717,7 +732,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
             active={isFleetChild}
             collapsed={false}
           >
-            {fleetNavigation.map((item) => (
+            {filteredFleet.map((item) => (
               <NavLink
                 key={item.name}
                 href={item.href}
@@ -730,7 +745,9 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
               />
             ))}
           </CollapsibleSection>
+          )}
 
+          {hasModuleAccess('fileMovement') && (
           <CollapsibleSection
             label="File Movement"
             icon={FolderOpen}
@@ -739,7 +756,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
             active={isFileMovementChild}
             collapsed={false}
           >
-            {fileMovementNavigation.map((item) => (
+            {filteredFileMovement.map((item) => (
               <NavLink
                 key={item.name}
                 href={item.href}
@@ -752,6 +769,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
               />
             ))}
           </CollapsibleSection>
+          )}
 
           {hasRole('admin') && (
             <>
