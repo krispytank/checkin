@@ -220,12 +220,12 @@ function MessagesDropdown({ onClose }) {
   const { data, isLoading } = useQuery({
     queryKey: ['messages', 'dropdown', tab],
     queryFn: async () => {
-      const res = await messagesAPI.list({ type: tab, limit: 8 });
+      const res = await messagesAPI.list({ folder: tab, limit: 8 });
       return res.data;
     },
   });
 
-  const messages = data?.data?.messages || [];
+  const messages = data?.data || [];
 
   return (
     <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border bg-card shadow-xl z-50 overflow-hidden">
