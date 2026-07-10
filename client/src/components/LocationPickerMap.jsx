@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Circle, useMapEvents, useMap } from 'r
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, X } from 'lucide-react';
-import { TILE_URL, TILE_ATTRIBUTION, DEFAULT_MAP_OPTIONS, DEFAULT_TILE_OPTIONS } from '../lib/mapConfig.js';
+import { TILE_URL, TILE_ATTRIBUTION } from '../lib/mapConfig.js';
 
 const DEFAULT_CENTER = [-1.2921, 36.8219];
 const DEFAULT_ZOOM = 13;
@@ -178,11 +178,11 @@ export default function LocationPickerMap({ latitude, longitude, radius, onLocat
           zoom={DEFAULT_ZOOM}
           style={{ height: '100%', width: '100%' }}
           scrollWheelZoom={true}
-          {...DEFAULT_MAP_OPTIONS}
+          zoomControl={true}
         >
           <TileLayer
+            attribution={TILE_ATTRIBUTION}
             url={TILE_URL}
-            {...DEFAULT_TILE_OPTIONS}
           />
           <MapEvents onLocationSelect={handleLocationSelect} />
           <MapUpdater center={center} />
