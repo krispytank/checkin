@@ -3,8 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api.js';
 import { Shield, Search, Loader2, ChevronLeft, ChevronRight, Filter, X } from 'lucide-react';
 
-const MODULES = ['attendance', 'equipment', 'fleet', 'fileMovement', 'audit'];
-const ACTIONS = ['created', 'updated', 'deleted', 'approved', 'rejected', 'issued', 'returned', 'released', 'moved'];
+const MODULES = ['attendance', 'equipment', 'fleet', 'fileMovement', 'registries', 'visitorParking', 'parkingLots', 'maintenance', 'notifications'];
+const ACTIONS = ['created', 'updated', 'deleted', 'approved', 'rejected', 'issued', 'returned', 'released', 'moved', 'dispatched', 'in-use', 'received', 'scheduled', 'completed', 'cancelled'];
 
 export default function AdminAuditLogsPage() {
   const [filters, setFilters] = useState({
@@ -215,7 +215,10 @@ function LogRow({ log }) {
         <td className="px-4 py-3 whitespace-nowrap">
           {log.timestamp ? new Date(log.timestamp).toLocaleString() : '-'}
         </td>
-        <td className="px-4 py-3 font-mono text-xs">{log.userId || '-'}</td>
+        <td className="px-4 py-3">
+          <div className="text-sm">{log.userName || 'System'}</div>
+          {log.userId && <div className="text-[10px] font-mono text-muted-foreground">{log.userId}</div>}
+        </td>
         <td className="px-4 py-3">
           <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium capitalize">
             {log.module}

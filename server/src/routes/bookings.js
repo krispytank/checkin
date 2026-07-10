@@ -18,10 +18,14 @@ const VALID_TRANSITIONS = {
 };
 
 const enrichBooking = async (db, booking) => {
+  const userIdObj = booking.userId ? (() => { try { return new ObjectId(booking.userId); } catch { return null; } })() : null;
+  const caseIdObj = booking.caseId ? (() => { try { return new ObjectId(booking.caseId); } catch { return null; } })() : null;
+  const equipmentIds = (booking.equipmentIds || []).map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean);
+
   const [user, equipment, caseItem] = await Promise.all([
-    booking.userId ? db.collection('users').findOne({ _id: new ObjectId(booking.userId) }, { projection: { password: 0 } }) : null,
-    booking.equipmentIds?.length ? db.collection('equipment').find({ _id: { $in: booking.equipmentIds.map(id => new ObjectId(id)) } }).toArray() : [],
-    booking.caseId ? db.collection('cases').findOne({ _id: new ObjectId(booking.caseId) }) : null,
+    userIdObj ? db.collection('users').findOne({ _id: userIdObj }, { projection: { password: 0 } }) : null,
+    equipmentIds.length ? db.collection('equipment').find({ _id: { $in: equipmentIds } }).toArray() : [],
+    caseIdObj ? db.collection('cases').findOne({ _id: caseIdObj }) : null,
   ]);
 
   return {
@@ -93,10 +97,17 @@ router.get('/:id', authenticate, async (req, res, next) => {
 // POST /api/bookings - Create booking
 router.post('/', authenticate, authorizeModule('equipment', 'admin', 'booker'), async (req, res, next) => {
   try {
-    const { caseId, equipmentIds, startDate, endDate, purpose = '' } = req.body;
+    const { caseId, equipmentIds, startDate, endDate, purpose = '', purposeType = 'virtual_court', requireDocument = true } = req.body;
 
-    const caseError = validateRequired(caseId, 'Case');
-    if (caseError) return res.status(400).json({ success: false, message: caseError });
+    const validPurposeTypes = ['virtual_court', 'staff_training', 'administrative_meeting'];
+    if (!validPurposeTypes.includes(purposeType)) {
+      return res.status(400).json({ success: false, message: 'Invalid purpose type' });
+    }
+
+    if (purposeType === 'virtual_court') {
+      const caseError = validateRequired(caseId, 'Case');
+      if (caseError) return res.status(400).json({ success: false, message: caseError });
+    }
     if (!equipmentIds?.length) {
       return res.status(400).json({ success: false, message: 'At least one equipment item is required' });
     }
@@ -130,12 +141,14 @@ router.post('/', authenticate, authorizeModule('equipment', 'admin', 'booker'), 
     const bookingId = `BK${Date.now().toString(36).toUpperCase()}`;
     const newBooking = {
       bookingId,
-      caseId,
+      caseId: purposeType === 'virtual_court' ? caseId : null,
       equipmentIds,
       userId: req.user._id.toString(),
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       purpose: purpose.trim(),
+      purposeType,
+      requireDocument: !!requireDocument,
       status: 'pending',
       history: [{
         status: 'pending',

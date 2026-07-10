@@ -197,6 +197,7 @@ export default function FileReportsPage() {
                         <tr className="border-b bg-muted/50">
                           <th className="px-4 py-2 text-left font-medium text-muted-foreground">File Number</th>
                           <th className="px-4 py-2 text-left font-medium text-muted-foreground">Title</th>
+                          <th className="px-4 py-2 text-left font-medium text-muted-foreground">Assigned To</th>
                           <th className="px-4 py-2 text-left font-medium text-muted-foreground">Current Location</th>
                           <th className="px-4 py-2 text-left font-medium text-muted-foreground">Days Out</th>
                           <th className="px-4 py-2 text-left font-medium text-muted-foreground">Overdue</th>
@@ -207,6 +208,16 @@ export default function FileReportsPage() {
                           <tr key={i} className="border-b">
                             <td className="px-4 py-2 font-mono text-xs">{f.caseFileNumber}</td>
                             <td className="px-4 py-2 text-xs max-w-[200px] truncate">{f.caseTitle}</td>
+                            <td className="px-4 py-2 text-xs">
+                              {f.assignedToName ? (
+                                <div>
+                                  <p className="font-medium">{f.assignedToName}</p>
+                                  {f.assignedToEmployeeId && <p className="text-muted-foreground text-[10px]">{f.assignedToEmployeeId}</p>}
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </td>
                             <td className="px-4 py-2 text-xs">{f.currentLocation}</td>
                             <td className="px-4 py-2 text-xs">{f.daysOutsideRegistry}</td>
                             <td className="px-4 py-2">

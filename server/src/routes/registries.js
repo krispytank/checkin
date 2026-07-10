@@ -100,6 +100,7 @@ router.post('/', authenticate, authorize('admin'), async (req, res, next) => {
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'created',
       module: 'fileMovement',
       entityType: 'registry',
@@ -167,6 +168,7 @@ router.put('/:id', authenticate, authorize('admin'), async (req, res, next) => {
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'updated',
       module: 'fileMovement',
       entityType: 'registry',
@@ -214,6 +216,7 @@ router.delete('/:id', authenticate, authorize('admin'), async (req, res, next) =
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'deleted',
       module: 'fileMovement',
       entityType: 'registry',

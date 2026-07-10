@@ -333,6 +333,7 @@ router.put('/:id/status', authenticate, async (req, res, next) => {
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: status,
       module: 'fleet',
       entityType: 'trip',

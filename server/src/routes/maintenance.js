@@ -156,6 +156,7 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, re
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'created',
       module: 'fleet',
       entityType: 'maintenance',
@@ -208,6 +209,7 @@ router.put('/:id', authenticate, authorizeModule('fleet', 'admin'), async (req, 
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'updated',
       module: 'fleet',
       entityType: 'maintenance',

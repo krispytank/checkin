@@ -17,6 +17,7 @@ import { getDB } from '../db.js';
  */
 export async function logAudit({
   userId,
+  userName = null,
   action,
   module,
   entityType,
@@ -31,6 +32,7 @@ export async function logAudit({
     const db = getDB();
     const entry = {
       userId,
+      userName: userName || null,
       action,
       module,
       entityType,

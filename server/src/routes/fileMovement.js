@@ -155,6 +155,7 @@ router.post('/case-files', authenticate, authorizeModule('fileMovement', 'admin'
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'created',
       module: 'fileMovement',
       entityType: 'caseFile',
@@ -207,6 +208,7 @@ router.put('/case-files/:id', authenticate, authorizeModule('fileMovement', 'adm
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'updated',
       module: 'fileMovement',
       entityType: 'caseFile',
@@ -251,6 +253,7 @@ router.delete('/case-files/:id', authenticate, authorizeModule('fileMovement', '
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'deleted',
       module: 'fileMovement',
       entityType: 'caseFile',
@@ -382,6 +385,7 @@ router.post('/movements', authenticate, authorizeModule('fileMovement', 'admin',
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'moved',
       module: 'fileMovement',
       entityType: 'fileMovement',
@@ -458,6 +462,7 @@ router.put('/movements/:id/return', authenticate, async (req, res, next) => {
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'returned',
       module: 'fileMovement',
       entityType: 'fileMovement',
@@ -595,6 +600,7 @@ router.post('/requests', authenticate, authorizeModule('fileMovement', 'admin', 
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'created',
       module: 'fileMovement',
       entityType: 'fileRequest',
@@ -670,6 +676,7 @@ router.put('/requests/:id/approve', authenticate, authorizeModule('fileMovement'
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: isApproved ? 'approved' : 'rejected',
       module: 'fileMovement',
       entityType: 'fileRequest',
@@ -756,6 +763,7 @@ router.post('/strong-room/release', authenticate, authorizeModule('fileMovement'
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'released',
       module: 'fileMovement',
       entityType: 'strongRoom',
@@ -814,6 +822,7 @@ router.put('/strong-room/:id/return', authenticate, authorizeModule('fileMovemen
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'returned',
       module: 'fileMovement',
       entityType: 'strongRoom',

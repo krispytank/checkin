@@ -30,6 +30,8 @@
     "release:minor": "npm run version:minor && git push origin main --tags",
     "release:major": "npm run version:major && git push origin main --tags",
     "deploy": "./deploy.sh",
+    "deploy:vercel": "./deploy-vercel.sh",
+    "deploy:vercel:preview": "./deploy-vercel.sh --preview",
     "deploy:status": "./deploy.sh --status",
     "deploy:force": "./deploy.sh --force"
   },

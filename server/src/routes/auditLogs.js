@@ -45,6 +45,7 @@ router.get('/', authenticate, authorize('admin'), async (req, res, next) => {
         { entityType: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
         { module: { $regex: search, $options: 'i' } },
+        { userName: { $regex: search, $options: 'i' } },
       ];
     }
 

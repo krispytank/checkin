@@ -4,7 +4,8 @@ import { bookingsAPI, authAPI } from '../../lib/api.js';
 import { cn } from '../../lib/utils.js';
 import {
   Loader2, Check, X, Truck, RotateCcw, FileText, Calendar, Clock,
-  Monitor, Video, Presentation, ChevronDown, ChevronUp, PackageCheck
+  Monitor, Video, Presentation, ChevronDown, ChevronUp, PackageCheck,
+  Gavel, GraduationCap, Users
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -21,6 +22,12 @@ const TYPE_ICONS = {
   'Screen': Monitor,
   'Sound System': Video,
   'Camera': Presentation,
+};
+
+const PURPOSE_TYPE_CONFIG = {
+  virtual_court: { label: 'Virtual Court', icon: Gavel, color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
+  staff_training: { label: 'Staff Training', icon: GraduationCap, color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
+  administrative_meeting: { label: 'Admin Meeting', icon: Users, color: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300' },
 };
 
 function PdfViewerModal({ open, onClose, url, title }) {
@@ -51,19 +58,29 @@ function BookingCard({ booking, onAction, onViewPdf, role }) {
   const equipment = booking.equipmentDetails || [];
   const caseInfo = booking.caseDetails || {};
   const user = booking.userDetails || {};
+  const purposeCfg = PURPOSE_TYPE_CONFIG[booking.purposeType];
+  const PurposeIcon = purposeCfg?.icon;
 
   return (
     <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
       <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-semibold">{caseInfo.caseNumber || 'N/A'}</p>
+              {purposeCfg ? (
+                <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium", purposeCfg.color)}>
+                  <PurposeIcon className="h-3 w-3" /> {purposeCfg.label}
+                </span>
+              ) : (
+                <p className="text-sm font-semibold">{caseInfo.caseNumber || 'N/A'}</p>
+              )}
               <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium", statusCfg.color)}>
                 <StatusIcon className="h-3 w-3" /> {statusCfg.label}
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-0.5 truncate">{caseInfo.title}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 truncate">
+              {booking.purposeType === 'virtual_court' ? caseInfo.title : (booking.purpose || 'No details provided')}
+            </p>
           </div>
           <button onClick={() => setExpanded(!expanded)} className="p-1 rounded-lg hover:bg-muted shrink-0">
             {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -101,11 +118,20 @@ function BookingCard({ booking, onAction, onViewPdf, role }) {
               </p>
             </div>
           )}
+          {booking.purposeType === 'virtual_court' && caseInfo.caseNumber && (
+            <div>
+              <p className="text-xs text-muted-foreground">Case</p>
+              <p className="text-xs">{caseInfo.caseNumber} — {caseInfo.title}</p>
+            </div>
+          )}
           {booking.purpose && (
             <div>
-              <p className="text-xs text-muted-foreground">Purpose</p>
+              <p className="text-xs text-muted-foreground">{booking.purposeType === 'virtual_court' ? 'Notes' : 'Reason'}</p>
               <p>{booking.purpose}</p>
             </div>
+          )}
+          {!booking.requireDocument && (
+            <p className="text-xs text-muted-foreground italic">No document uploaded</p>
           )}
           {booking.pdfFilePath && (
             <button onClick={() => onViewPdf(booking.pdfFilePath, `Request - ${caseInfo.caseNumber}`)}

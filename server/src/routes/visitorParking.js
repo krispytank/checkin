@@ -124,6 +124,7 @@ router.post('/check-in', authenticate, async (req, res, next) => {
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'created',
       module: 'fleet',
       entityType: 'visitor_parking',
@@ -166,6 +167,7 @@ router.put('/:id/check-out', authenticate, async (req, res, next) => {
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'updated',
       module: 'fleet',
       entityType: 'visitor_parking',

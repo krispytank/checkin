@@ -4,7 +4,8 @@ import { useLocation } from 'wouter';
 import { casesAPI, equipmentAPI, bookingsAPI } from '../../lib/api.js';
 import { cn } from '../../lib/utils.js';
 import {
-  Search, Plus, FileText, Monitor, Video, Presentation, Loader2, X, Check
+  Search, Plus, FileText, Monitor, Video, Presentation, Loader2, X, Check,
+  Gavel, GraduationCap, Users, Upload, UploadCloud
 } from 'lucide-react';
 import DateTimePopover from '../../components/DateTimePopover.jsx';
 
@@ -13,6 +14,12 @@ const TYPE_ICONS = {
   'Sound System': Video,
   'Camera': Presentation,
 };
+
+const PURPOSE_TYPES = [
+  { value: 'virtual_court', label: 'Virtual Court Session', icon: Gavel, description: 'Requires linked case file' },
+  { value: 'staff_training', label: 'Staff Training', icon: GraduationCap, description: 'No case file needed' },
+  { value: 'administrative_meeting', label: 'Admin Meeting / Event', icon: Users, description: 'No case file needed' },
+];
 
 function CaseSearchModal({ open, onClose, onSelect }) {
   const [search, setSearch] = useState('');
@@ -117,11 +124,13 @@ function CaseSearchModal({ open, onClose, onSelect }) {
 export default function BookEquipmentPage() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const [purposeType, setPurposeType] = useState('virtual_court');
   const [selectedCase, setSelectedCase] = useState(null);
   const [selectedEquipment, setSelectedEquipment] = useState([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [requireDocument, setRequireDocument] = useState(true);
   const [pdfFile, setPdfFile] = useState(null);
   const [caseModalOpen, setCaseModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -136,6 +145,7 @@ export default function BookEquipmentPage() {
   });
 
   const equipment = equipData?.data || [];
+  const isCourt = purposeType === 'virtual_court';
 
   const toggleEquipment = (eq) => {
     setSelectedEquipment(prev => {
@@ -145,20 +155,41 @@ export default function BookEquipmentPage() {
     });
   };
 
+  const resetForm = () => {
+    setPurposeType('virtual_court');
+    setSelectedCase(null);
+    setSelectedEquipment([]);
+    setStartDate('');
+    setEndDate('');
+    setPurpose('');
+    setRequireDocument(true);
+    setPdfFile(null);
+    setSubmitResult(null);
+  };
+
   const handleSubmit = async () => {
-    if (!selectedCase || selectedEquipment.length === 0 || !startDate || !endDate) return;
+    if (isCourt && !selectedCase) return;
+    if (selectedEquipment.length === 0 || !startDate || !endDate) return;
+    if (!purpose.trim()) return;
+
     setSubmitting(true);
     try {
-      const res = await bookingsAPI.create({
-        caseId: selectedCase._id,
+      const payload = {
         equipmentIds: selectedEquipment.map(e => e._id),
         startDate,
         endDate,
         purpose,
-      });
+        purposeType,
+        requireDocument,
+      };
+      if (isCourt && selectedCase) {
+        payload.caseId = selectedCase._id;
+      }
+
+      const res = await bookingsAPI.create(payload);
       const bookingId = res.data.data._id;
 
-      if (pdfFile) {
+      if (requireDocument && pdfFile) {
         const fd = new FormData();
         fd.append('file', pdfFile);
         await bookingsAPI.uploadPdf(bookingId, fd);
@@ -206,10 +237,7 @@ export default function BookEquipmentPage() {
         <div className="flex gap-3">
           <button onClick={() => navigate('/equipment/manage')}
             className="flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-muted">View Bookings</button>
-          <button onClick={() => {
-            setSelectedCase(null); setSelectedEquipment([]); setStartDate(''); setEndDate('');
-            setPurpose(''); setPdfFile(null); setSubmitResult(null);
-          }}
+          <button onClick={resetForm}
             className="flex-1 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">New Booking</button>
         </div>
       </div>
@@ -220,33 +248,75 @@ export default function BookEquipmentPage() {
     <div className="max-w-lg mx-auto space-y-4 sm:space-y-6">
       <div>
         <h1 className="text-xl sm:text-2xl font-bold">New Equipment Booking</h1>
-        <p className="text-xs sm:text-sm text-muted-foreground">Select equipment and schedule for your case</p>
+        <p className="text-xs sm:text-sm text-muted-foreground">Select equipment and schedule your request</p>
       </div>
 
-      {/* Case Selection */}
+      {/* Purpose Type Selection */}
       <div className="rounded-xl border bg-card p-4 shadow-sm">
-        <label className="text-sm font-medium">Linked Case *</label>
-        <button onClick={() => setCaseModalOpen(true)}
-          className={cn(
-            "w-full mt-2 flex items-center gap-3 rounded-lg border-2 border-dashed p-3 text-left hover:bg-muted transition-colors",
-            selectedCase ? "border-primary/50 bg-primary/5" : "border-muted-foreground/25"
-          )}>
-          {selectedCase ? (
-            <>
-              <FileText className="h-5 w-5 text-primary shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{selectedCase.caseNumber}</p>
-                <p className="text-xs text-muted-foreground truncate">{selectedCase.title}</p>
-              </div>
-            </>
-          ) : (
-            <>
-              <Plus className="h-5 w-5 text-muted-foreground shrink-0" />
-              <span className="text-sm text-muted-foreground">Search or create a case...</span>
-            </>
-          )}
-        </button>
+        <label className="text-sm font-medium">Booking Purpose *</label>
+        <p className="text-[10px] text-muted-foreground mt-0.5 mb-3">Select what you need the equipment for</p>
+        <div className="space-y-2">
+          {PURPOSE_TYPES.map(pt => {
+            const Icon = pt.icon;
+            return (
+              <button key={pt.value} onClick={() => {
+                setPurposeType(pt.value);
+                if (pt.value !== 'virtual_court') {
+                  setSelectedCase(null);
+                  setRequireDocument(false);
+                } else {
+                  setRequireDocument(true);
+                }
+              }}
+                className={cn(
+                  "w-full flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all",
+                  purposeType === pt.value
+                    ? "border-primary bg-primary/5"
+                    : "border-muted hover:border-muted-foreground/30 hover:bg-muted/50"
+                )}>
+                <div className={cn(
+                  "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+                  purposeType === pt.value ? "bg-primary/10" : "bg-muted"
+                )}>
+                  <Icon className={cn("h-5 w-5", purposeType === pt.value ? "text-primary" : "text-muted-foreground")} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{pt.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{pt.description}</p>
+                </div>
+                {purposeType === pt.value && <Check className="h-4 w-4 text-primary shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
       </div>
+
+      {/* Case Selection - only for virtual court */}
+      {isCourt && (
+        <div className="rounded-xl border bg-card p-4 shadow-sm">
+          <label className="text-sm font-medium">Linked Case *</label>
+          <button onClick={() => setCaseModalOpen(true)}
+            className={cn(
+              "w-full mt-2 flex items-center gap-3 rounded-lg border-2 border-dashed p-3 text-left hover:bg-muted transition-colors",
+              selectedCase ? "border-primary/50 bg-primary/5" : "border-muted-foreground/25"
+            )}>
+            {selectedCase ? (
+              <>
+                <FileText className="h-5 w-5 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">{selectedCase.caseNumber}</p>
+                  <p className="text-xs text-muted-foreground truncate">{selectedCase.title}</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <Plus className="h-5 w-5 text-muted-foreground shrink-0" />
+                <span className="text-sm text-muted-foreground">Search or create a case...</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Equipment Selection */}
       <div className="rounded-xl border bg-card p-4 shadow-sm">
@@ -283,7 +353,7 @@ export default function BookEquipmentPage() {
         )}
       </div>
 
-      {/* Schedule */}
+      {/* Schedule + Reason */}
       <div className="rounded-xl border bg-card p-4 shadow-sm space-y-3">
         <div>
           <label className="text-sm font-medium">Usage Period *</label>
@@ -304,31 +374,69 @@ export default function BookEquipmentPage() {
           </div>
         </div>
         <div>
-          <label className="text-sm font-medium">Notes</label>
-          <textarea value={purpose} onChange={e => setPurpose(e.target.value)} rows={2} placeholder="Any additional details..."
+          <label className="text-sm font-medium">{isCourt ? 'Notes' : 'Reason for Request'} *</label>
+          <textarea value={purpose} onChange={e => setPurpose(e.target.value)} rows={2}
+            placeholder={isCourt ? "Any additional details..." : "Describe why you need this equipment..."}
             className="w-full mt-1 rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
         </div>
       </div>
 
-      {/* PDF Upload */}
-      <div className="rounded-xl border bg-card p-4 shadow-sm">
-        <label className="text-sm font-medium">Request Document (PDF)</label>
-        <p className="text-[10px] text-muted-foreground mt-0.5">Upload the booking request form as PDF</p>
-        <div className="mt-2">
-          <input type="file" accept=".pdf" onChange={e => setPdfFile(e.target.files?.[0])}
-            className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
-        </div>
-        {pdfFile && (
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-            <FileText className="h-3.5 w-3.5" /> {pdfFile.name} ({(pdfFile.size / 1024).toFixed(1)} KB)
-            <button onClick={() => setPdfFile(null)} className="text-destructive hover:underline">Remove</button>
+      {/* Document Upload Toggle - for non-court */}
+      {!isCourt && (
+        <div className="rounded-xl border bg-card p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium">Upload Supporting Document</label>
+              <p className="text-[10px] text-muted-foreground mt-0.5">Optional — attach a request form or approval memo</p>
+            </div>
+            <button
+              onClick={() => setRequireDocument(!requireDocument)}
+              className={cn(
+                "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2",
+                requireDocument ? "bg-primary" : "bg-muted"
+              )}>
+              <span className={cn(
+                "pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out",
+                requireDocument ? "translate-x-5" : "translate-x-0"
+              )} />
+            </button>
           </div>
-        )}
-      </div>
+          {requireDocument && (
+            <div className="mt-3">
+              <input type="file" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" onChange={e => setPdfFile(e.target.files?.[0])}
+                className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
+              {pdfFile && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <FileText className="h-3.5 w-3.5" /> {pdfFile.name} ({(pdfFile.size / 1024).toFixed(1)} KB)
+                  <button onClick={() => setPdfFile(null)} className="text-destructive hover:underline">Remove</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* PDF Upload for court - always shown */}
+      {isCourt && (
+        <div className="rounded-xl border bg-card p-4 shadow-sm">
+          <label className="text-sm font-medium">Request Document (PDF)</label>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Upload the booking request form as PDF</p>
+          <div className="mt-2">
+            <input type="file" accept=".pdf" onChange={e => setPdfFile(e.target.files?.[0])}
+              className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90" />
+          </div>
+          {pdfFile && (
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <FileText className="h-3.5 w-3.5" /> {pdfFile.name} ({(pdfFile.size / 1024).toFixed(1)} KB)
+              <button onClick={() => setPdfFile(null)} className="text-destructive hover:underline">Remove</button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Submit */}
       <button onClick={handleSubmit}
-        disabled={!selectedCase || selectedEquipment.length === 0 || !startDate || !endDate || submitting}
+        disabled={(isCourt && !selectedCase) || selectedEquipment.length === 0 || !startDate || !endDate || !purpose.trim() || submitting}
         className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">
         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         Submit Booking

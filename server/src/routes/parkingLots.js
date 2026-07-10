@@ -11,17 +11,29 @@ const router = Router();
 router.get('/', authenticate, async (req, res, next) => {
   try {
     const db = getDB();
-    const { courtStationId } = req.query;
+    const { courtStationId, stationId } = req.query;
 
     const filter = {};
-    if (courtStationId) filter.courtStationId = courtStationId;
+    const resolvedStationId = courtStationId || stationId;
+    if (resolvedStationId) filter.courtStationId = resolvedStationId;
 
     const lots = await db.collection('parking_lots')
       .find(filter)
       .sort({ name: 1 })
       .toArray();
 
-    res.json({ success: true, data: lots });
+    const stationIds = [...new Set(lots.map(l => l.courtStationId).filter(Boolean))];
+    const stations = stationIds.length
+      ? await db.collection('court_stations').find({ _id: { $in: stationIds.map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean) } }).toArray()
+      : [];
+    const stationMap = Object.fromEntries(stations.map(s => [s._id.toString(), s.name]));
+
+    const enriched = lots.map(lot => ({
+      ...lot,
+      stationName: stationMap[lot.courtStationId] || null,
+    }));
+
+    res.json({ success: true, data: enriched });
   } catch (error) {
     next(error);
   }
@@ -84,28 +96,25 @@ router.get('/:id', authenticate, async (req, res, next) => {
 router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, res, next) => {
   try {
     const {
-      name, courtStationId, category, totalBays, description,
-      gpsLatitude, gpsLongitude,
+      name, courtStationId, stationId, category, type, totalBays, description,
+      gpsLatitude, gpsLongitude, zone,
     } = req.body;
+
+    const resolvedStationId = courtStationId || stationId;
+    const resolvedCategory = category || type || 'standard';
 
     const _err = validateRequired(name, 'Name'); if (_err) {
       return res.status(400).json({ success: false, message: _err });
     }
-    const _err2 = validateRequired(courtStationId, 'Court Station'); if (_err2) {
+    const _err2 = validateRequired(resolvedStationId, 'Court Station'); if (_err2) {
       return res.status(400).json({ success: false, message: _err2 });
-    }
-    const _err3 = validateRequired(category, 'Category'); if (_err3) {
-      return res.status(400).json({ success: false, message: _err3 });
-    }
-    if (!totalBays || parseInt(totalBays) < 1) {
-      return res.status(400).json({ success: false, message: 'Total bays must be at least 1' });
     }
 
     const db = getDB();
 
     const existing = await db.collection('parking_lots').findOne({
       name: name.trim(),
-      courtStationId,
+      courtStationId: resolvedStationId,
     });
     if (existing) {
       return res.status(409).json({
@@ -116,9 +125,10 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, re
 
     const newLot = {
       name: name.trim(),
-      courtStationId,
-      category: category.trim(),
-      totalBays: parseInt(totalBays),
+      courtStationId: resolvedStationId,
+      category: resolvedCategory.trim(),
+      zone: zone?.trim() || null,
+      totalBays: totalBays ? parseInt(totalBays) : 1,
       occupiedBays: 0,
       reservedBays: 0,
       description: description?.trim() || null,
@@ -134,6 +144,7 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, re
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'created',
       module: 'fleet',
       entityType: 'parking_lot',
@@ -154,7 +165,7 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, re
 router.put('/:id', authenticate, authorizeModule('fleet', 'admin'), async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, category, totalBays, description, gpsLatitude, gpsLongitude, status, isActive } = req.body;
+    const { name, category, type, totalBays, description, gpsLatitude, gpsLongitude, status, isActive, zone } = req.body;
 
     const db = getDB();
     let lot;
@@ -181,7 +192,8 @@ router.put('/:id', authenticate, authorizeModule('fleet', 'admin'), async (req, 
       }
       updateData.name = name.trim();
     }
-    if (category) updateData.category = category.trim();
+    if (category || type) updateData.category = (category || type).trim();
+    if (zone !== undefined) updateData.zone = zone?.trim() || null;
     if (totalBays !== undefined) {
       const newTotal = parseInt(totalBays);
       if (newTotal < (lot.occupiedBays || 0)) {
@@ -207,6 +219,7 @@ router.put('/:id', authenticate, authorizeModule('fleet', 'admin'), async (req, 
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'updated',
       module: 'fleet',
       entityType: 'parking_lot',
@@ -250,6 +263,7 @@ router.delete('/:id', authenticate, authorizeModule('fleet', 'admin'), async (re
 
     await logAudit({
       userId: req.user._id.toString(),
+      userName: req.user.name,
       action: 'deleted',
       module: 'fleet',
       entityType: 'parking_lot',

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { parkingAPI, stationsAPI } from '../../lib/api.js';
-import { Plus, Search, Loader2, MapPin, X, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, Loader2, MapPin, X, Edit2, Trash2, AlertCircle } from 'lucide-react';
 
 const SPACE_TYPES = [
   { value: 'standard', label: 'Standard' },
@@ -91,6 +91,7 @@ export default function AdminFleetParkingPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingSpace, setEditingSpace] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [formError, setFormError] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['fleet', 'parking', { search }],
@@ -116,6 +117,10 @@ export default function AdminFleetParkingPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fleet', 'parking'] });
       setShowForm(false);
+      setFormError('');
+    },
+    onError: (err) => {
+      setFormError(err?.response?.data?.message || 'Failed to create parking space');
     },
   });
 
@@ -174,12 +179,19 @@ export default function AdminFleetParkingPage() {
               </button>
             </div>
             <ParkingForm space={editingSpace} stations={stations}
-              onSubmit={(data) => editingSpace
-                ? updateMutation.mutate({ id: editingSpace._id, ...data })
-                : createMutation.mutate(data)
-              }
-              onCancel={() => { setShowForm(false); setEditingSpace(null); }}
+              onSubmit={(data) => {
+                setFormError('');
+                editingSpace
+                  ? updateMutation.mutate({ id: editingSpace._id, ...data })
+                  : createMutation.mutate(data);
+              }}
+              onCancel={() => { setShowForm(false); setEditingSpace(null); setFormError(''); }}
               isSubmitting={createMutation.isPending || updateMutation.isPending} />
+            {formError && (
+              <div className="mt-3 flex items-center gap-2 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                <AlertCircle className="h-4 w-4 shrink-0" /> {formError}
+              </div>
+            )}
           </div>
         </div>
       )}

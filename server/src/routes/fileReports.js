@@ -105,11 +105,20 @@ router.get('/custody', authenticate, async (req, res, next) => {
 
     const files = await db.collection('case_files').find(filter).toArray();
 
+    const holderIds = [...new Set(files.map(f => f.currentHolderId).filter(Boolean))];
+    const holders = holderIds.length > 0
+      ? await db.collection('users').find({ _id: { $in: holderIds.map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean) } }, { projection: { name: 1, employeeId: 1 } }).toArray()
+      : [];
+    const holderMap = Object.fromEntries(holders.map(u => [u._id.toString(), u]));
+
     const now = new Date();
     const enriched = files.map(f => {
       const daysOut = f.updatedAt ? Math.floor((now - f.updatedAt) / (1000 * 60 * 60 * 24)) : 0;
+      const holder = holderMap[f.currentHolderId];
       return {
         ...f,
+        assignedToName: holder?.name || null,
+        assignedToEmployeeId: holder?.employeeId || null,
         daysOutsideRegistry: daysOut,
         isOverdue: daysOut > 7,
       };
