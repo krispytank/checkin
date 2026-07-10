@@ -22,15 +22,23 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin', 'manager', 'dri
 
     const db = getDB();
 
-    // Verify vehicle exists
-    let vehicle;
-    try {
-      vehicle = await db.collection('vehicles').findOne({ _id: new ObjectId(vehicleId) });
-    } catch (e) {
-      return res.status(400).json({ success: false, message: 'Invalid vehicle ID' });
-    }
+    // Batch validate vehicle, station, and parking space in parallel
+    const lookups = [
+      db.collection('vehicles').findOne({ _id: new ObjectId(vehicleId) }).catch(() => null),
+      stationId ? db.collection('stations').findOne({ _id: new ObjectId(stationId) }).catch(() => null) : Promise.resolve(null),
+      parkingSpaceId ? db.collection('parking_spaces').findOne({ _id: new ObjectId(parkingSpaceId) }).catch(() => null) : Promise.resolve(null),
+    ];
+
+    const [vehicle, station, parkingSpace] = await Promise.all(lookups);
+
     if (!vehicle) {
       return res.status(404).json({ success: false, message: 'Vehicle not found' });
+    }
+    if (stationId && !station) {
+      return res.status(404).json({ success: false, message: 'Station not found' });
+    }
+    if (parkingSpaceId && !parkingSpace) {
+      return res.status(404).json({ success: false, message: 'Parking space not found' });
     }
 
     // Validate QR status
@@ -57,32 +65,6 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin', 'manager', 'dri
         message: `QR code expired. This QR was issued for ${vehicle.qrGeneratedYear}. Please contact admin for ${currentYear} renewal.`,
         errorCode: 'QR_EXPIRED',
       });
-    }
-
-    // Verify station exists if provided
-    if (stationId) {
-      let station;
-      try {
-        station = await db.collection('stations').findOne({ _id: new ObjectId(stationId) });
-      } catch (e) {
-        return res.status(400).json({ success: false, message: 'Invalid station ID' });
-      }
-      if (!station) {
-        return res.status(404).json({ success: false, message: 'Station not found' });
-      }
-    }
-
-    // Verify parking space exists if provided
-    if (parkingSpaceId) {
-      let parkingSpace;
-      try {
-        parkingSpace = await db.collection('parking_spaces').findOne({ _id: new ObjectId(parkingSpaceId) });
-      } catch (e) {
-        return res.status(400).json({ success: false, message: 'Invalid parking space ID' });
-      }
-      if (!parkingSpace) {
-        return res.status(404).json({ success: false, message: 'Parking space not found' });
-      }
     }
 
     // Check-in logic: ensure vehicle is not already checked-in at the same station
@@ -256,25 +238,33 @@ router.get('/active', authenticate, async (req, res, next) => {
   try {
     const db = getDB();
 
-    // Find all check-ins without a corresponding check-out
+    // Get all check-ins
     const allCheckins = await db.collection('vehicle_checkins')
       .find({ type: 'check-in' })
       .sort({ timestamp: -1 })
       .toArray();
 
-    const activeCheckins = [];
-
-    for (const checkin of allCheckins) {
-      const checkout = await db.collection('vehicle_checkins').findOne({
-        vehicleId: checkin.vehicleId,
-        type: 'check-out',
-        timestamp: { $gt: checkin.timestamp },
-      });
-
-      if (!checkout) {
-        activeCheckins.push(checkin);
-      }
+    if (allCheckins.length === 0) {
+      return res.json({ success: true, data: [] });
     }
+
+    // Get ALL check-outs in a single query (instead of N queries)
+    const allCheckouts = await db.collection('vehicle_checkins')
+      .find({ type: 'check-out' })
+      .toArray();
+
+    // Build a Set of "vehicleId + timestamp" for quick lookup
+    const checkoutSet = new Set(
+      allCheckouts.map(c => `${c.vehicleId}_${c.timestamp.getTime()}`)
+    );
+
+    // Filter: keep check-ins that have NO later check-out
+    const activeCheckins = allCheckins.filter(checkin => {
+      const hasCheckout = allCheckouts.some(
+        co => co.vehicleId === checkin.vehicleId && co.timestamp > checkin.timestamp
+      );
+      return !hasCheckout;
+    });
 
     // Enrich with names
     const vehicleIds = [...new Set(activeCheckins.map((r) => r.vehicleId).filter(Boolean))];

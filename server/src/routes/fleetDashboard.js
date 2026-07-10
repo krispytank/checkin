@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDB } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
+import { cached } from '../utils/cache.js';
 
 const router = Router();
 
@@ -9,6 +10,9 @@ router.get('/', authenticate, async (req, res, next) => {
   try {
     const db = getDB();
     const { courtStationId } = req.query;
+    const cacheKey = `fleet-dashboard:${courtStationId || 'all'}`;
+
+    const data = await cached(cacheKey, 30000, async () => {
 
     const vehicleFilter = {};
     if (courtStationId) vehicleFilter.assignedStationId = courtStationId;
@@ -72,41 +76,41 @@ router.get('/', authenticate, async (req, res, next) => {
       ? Math.round(((inUseVehicles + bookedVehicles) / totalVehicles) * 100)
       : 0;
 
-    res.json({
-      success: true,
-      data: {
-        vehicles: {
-          total: totalVehicles,
-          available: availableVehicles,
-          inUse: inUseVehicles,
-          booked: bookedVehicles,
-          underMaintenance: underMaintenanceVehicles,
-          outOfService: outOfServiceVehicles,
-          utilizationRate,
-        },
-        trips: {
-          thisMonth: tripsThisMonth,
-          completedThisMonth: completedTripsThisMonth,
-          recent: recentTrips,
-        },
-        mileage: {
-          total: totalMileage[0]?.total || 0,
-        },
-        fuel: {
-          totalConsumed: fuelStats[0]?.totalFuel || 0,
-          averagePerTrip: fuelStats[0]?.avgFuel || 0,
-          tripsTracked: fuelStats[0]?.tripCount || 0,
-        },
-        maintenance: {
-          upcoming: upcomingMaintenance,
-          insuranceExpiring: expiringInsurance,
-          inspectionExpiring: expiringInspection,
-        },
-        visitorParking: {
-          currentlyParked: visitorParkingToday,
-        },
+    return {
+      vehicles: {
+        total: totalVehicles,
+        available: availableVehicles,
+        inUse: inUseVehicles,
+        booked: bookedVehicles,
+        underMaintenance: underMaintenanceVehicles,
+        outOfService: outOfServiceVehicles,
+        utilizationRate,
       },
+      trips: {
+        thisMonth: tripsThisMonth,
+        completedThisMonth: completedTripsThisMonth,
+        recent: recentTrips,
+      },
+      mileage: {
+        total: totalMileage[0]?.total || 0,
+      },
+      fuel: {
+        totalConsumed: fuelStats[0]?.totalFuel || 0,
+        averagePerTrip: fuelStats[0]?.avgFuel || 0,
+        tripsTracked: fuelStats[0]?.tripCount || 0,
+      },
+      maintenance: {
+        upcoming: upcomingMaintenance,
+        insuranceExpiring: expiringInsurance,
+        inspectionExpiring: expiringInspection,
+      },
+      visitorParking: {
+        currentlyParked: visitorParkingToday,
+      },
+    };
     });
+
+    res.json({ success: true, data });
   } catch (error) {
     next(error);
   }

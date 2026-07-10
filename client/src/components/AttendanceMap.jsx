@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, Marker, Circle, Popup, useMap } from 'react-le
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { cn } from '../lib/utils.js';
+import { TILE_URL, TILE_ATTRIBUTION, DEFAULT_MAP_OPTIONS, DEFAULT_TILE_OPTIONS } from '../lib/mapConfig.js';
 
 const DEFAULT_CENTER = [-1.2921, 36.8219];
 const DEFAULT_ZOOM = 15;
@@ -85,14 +86,11 @@ export default function AttendanceMap({ checkInLocation, checkOutLocation, showA
         zoom={zoom}
         style={{ height: '100%', width: '100%' }}
         scrollWheelZoom={true}
-        zoomControl={true}
-        dragging={true}
-        doubleClickZoom={true}
-        touchZoom={true}
+        {...DEFAULT_MAP_OPTIONS}
       >
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url={TILE_URL}
+          {...DEFAULT_TILE_OPTIONS}
         />
         {positions.length > 1 && <FitBounds positions={positions} />}
         {primaryPin && <LocateButton center={primaryPin} />}

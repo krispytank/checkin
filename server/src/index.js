@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
@@ -75,6 +76,7 @@ app.use(helmet({
   } : undefined,
   crossOriginEmbedderPolicy: process.env.NODE_ENV === 'production',
 }));
+app.use(compression());
 app.use(mongoSanitize());
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
@@ -131,8 +133,8 @@ app.use('/api/fleet/dashboard', fleetDashboardRoutes);
 app.use('/api/fleet/reports', fleetReportRoutes);
 app.use('/api/file-reports', fileReportRoutes);
 
-// Serve uploaded files
-app.use('/uploads', express.static(join(__dirname, '../uploads')));
+// Serve uploaded files (1 hour cache)
+app.use('/uploads', express.static(join(__dirname, '../uploads'), { maxAge: '1h' }));
 
 // Health check endpoint — verifies MongoDB connectivity
 app.get('/api/health', async (req, res) => {
@@ -164,7 +166,11 @@ app.get('/api/version', async (req, res) => {
 // Serve static client files in production
 if (process.env.NODE_ENV === 'production') {
   const clientDistPath = join(__dirname, '../../client/dist');
-  app.use(express.static(clientDistPath));
+  app.use(express.static(clientDistPath, {
+    maxAge: '1y',
+    immutable: true,
+    index: false,
+  }));
   
   // SPA fallback — serve index.html for all non-API routes
   app.get('*', (req, res) => {

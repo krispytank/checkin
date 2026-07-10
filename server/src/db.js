@@ -24,6 +24,11 @@ export async function connectDB() {
 
     client = new MongoClient(MONGODB_URI, {
       serverSelectionTimeoutMS: 10000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 30000,
+      maxPoolSize: 10,
+      minPoolSize: 2,
+      maxIdleTimeMS: 30000,
       retryWrites: true,
       retryReads: true,
     });

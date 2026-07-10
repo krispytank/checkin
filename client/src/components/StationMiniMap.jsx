@@ -1,6 +1,7 @@
 import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { TILE_URL, DEFAULT_MAP_OPTIONS, DEFAULT_TILE_OPTIONS } from '../lib/mapConfig.js';
 
 const stationIcon = new L.DivIcon({
   className: 'custom-marker',
@@ -22,8 +23,9 @@ export default function StationMiniMap({ station }) {
         dragging={false}
         zoomControl={false}
         attributionControl={false}
+        {...DEFAULT_MAP_OPTIONS}
       >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <TileLayer url={TILE_URL} {...DEFAULT_TILE_OPTIONS} />
         <Marker position={center} icon={stationIcon} />
         <Circle
           center={center}

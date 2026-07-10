@@ -32,6 +32,33 @@ const enrichCaseFile = async (db, file) => {
   };
 };
 
+// Batch enrich: lookup registries, stations, users once for all files
+const enrichCaseFilesBatch = async (db, files) => {
+  const safeLookupMany = async (collection, ids) => {
+    const validIds = ids.filter(Boolean).map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean);
+    if (validIds.length === 0) return {};
+    const docs = await db.collection(collection).find({ _id: { $in: validIds } }).toArray();
+    return Object.fromEntries(docs.map(d => [d._id.toString(), d]));
+  };
+
+  const registryIds = files.map(f => f.registryId);
+  const stationIds = files.map(f => f.courtStationId);
+  const holderIds = files.map(f => f.currentHolderId);
+
+  const [registryMap, stationMap, holderMap] = await Promise.all([
+    safeLookupMany('registries', registryIds),
+    safeLookupMany('stations', stationIds),
+    safeLookupMany('users', holderIds),
+  ]);
+
+  return files.map(f => ({
+    ...f,
+    registryDetails: registryMap[f.registryId] || null,
+    stationDetails: stationMap[f.courtStationId] || null,
+    currentHolderDetails: holderMap[f.currentHolderId] || null,
+  }));
+};
+
 // ===== CASE FILES =====
 
 // GET /api/file-movement/case-files
@@ -64,7 +91,7 @@ router.get('/case-files', authenticate, async (req, res, next) => {
       db.collection('case_files').countDocuments(filter),
     ]);
 
-    const enriched = await Promise.all(files.map(f => enrichCaseFile(db, f)));
+    const enriched = await enrichCaseFilesBatch(db, files);
 
     res.json({
       success: true,

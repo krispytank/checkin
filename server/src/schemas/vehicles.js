@@ -37,5 +37,9 @@ export default {
     { key: { plateNumber: 1 }, options: { unique: true } },
     { key: { status: 1 } },
     { key: { category: 1 } },
+    { key: { assignedStationId: 1 } },
+    { key: { insuranceExpiry: 1 }, options: { sparse: true } },
+    { key: { inspectionExpiry: 1 }, options: { sparse: true } },
+    { key: { qrStatus: 1 } },
   ],
 };
