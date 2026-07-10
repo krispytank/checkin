@@ -12,11 +12,11 @@ export default function NotFoundPage() {
         </p>
         <div className="mt-8 flex items-center justify-center gap-4">
           <Link
-            href="/dashboard"
+            href="/"
             className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             <Home className="h-4 w-4" />
-            Go to Dashboard
+            Go Home
           </Link>
           <button
             onClick={() => window.history.back()}

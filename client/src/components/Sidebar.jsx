@@ -386,12 +386,12 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
         "flex-1 overflow-y-auto py-3 space-y-0.5 scrollbar-thin",
         collapsed ? "px-2" : "px-3",
       )}>
-        {/* Dashboard */}
+        {/* Home */}
         <NavLink
-          href="/dashboard"
+          href="/"
           icon={Home}
-          label="Dashboard"
-          active={location === '/dashboard'}
+          label="Home"
+          active={location === '/'}
           collapsed={collapsed}
           onClick={handleNavClick}
         />
@@ -653,10 +653,10 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
         {/* Mobile navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5 scrollbar-thin">
           <NavLink
-            href="/dashboard"
+            href="/"
             icon={Home}
-            label="Dashboard"
-            active={location === '/dashboard'}
+            label="Home"
+            active={location === '/'}
             collapsed={false}
             onClick={handleNavClick}
           />

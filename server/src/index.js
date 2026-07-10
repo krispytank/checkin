@@ -35,7 +35,6 @@ import fileMovementRoutes from './routes/fileMovement.js';
 import fleetDashboardRoutes from './routes/fleetDashboard.js';
 import fleetReportRoutes from './routes/fleetReports.js';
 import fileReportRoutes from './routes/fileReports.js';
-import dashboardRoutes from './routes/dashboard.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -131,7 +130,6 @@ app.use('/api/file-movement', fileMovementRoutes);
 app.use('/api/fleet/dashboard', fleetDashboardRoutes);
 app.use('/api/fleet/reports', fleetReportRoutes);
 app.use('/api/file-reports', fileReportRoutes);
-app.use('/api/dashboard', dashboardRoutes);
 
 // Serve uploaded files
 app.use('/uploads', express.static(join(__dirname, '../uploads')));

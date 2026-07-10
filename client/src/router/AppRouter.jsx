@@ -22,9 +22,6 @@ const LandingPage = lazy(() => import('../pages/LandingPage.jsx'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage.jsx'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage.jsx'));
 
-// Dashboard
-const UnifiedDashboardPage = lazy(() => import('../pages/dashboard/UnifiedDashboardPage.jsx'));
-
 // Attendance module
 const AttendanceDashboardPage = lazy(() => import('../pages/attendance/DashboardPage.jsx'));
 const TeamPage = lazy(() => import('../pages/attendance/TeamPage.jsx'));
@@ -131,15 +128,6 @@ export default function AppRouter() {
           <ProtectedRoute>
             <MainLayout>
               <ProfilePage />
-            </MainLayout>
-          </ProtectedRoute>
-        </Route>
-
-        {/* Unified Dashboard */}
-        <Route path="/dashboard">
-          <ProtectedRoute>
-            <MainLayout>
-              <UnifiedDashboardPage />
             </MainLayout>
           </ProtectedRoute>
         </Route>

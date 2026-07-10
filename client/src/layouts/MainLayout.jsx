@@ -14,7 +14,7 @@ import Sidebar from '../components/Sidebar.jsx';
 const COLLAPSED_KEY = 'sidebar-collapsed';
 
 const mobileNavItems = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Home', href: '/', icon: Home },
   { name: 'Attend', href: '/attendance/dashboard', icon: Clock },
   { name: 'Fleet', href: '/fleet/dashboard', icon: Car },
   { name: 'Files', href: '/file-movement/dashboard', icon: FolderOpen },
