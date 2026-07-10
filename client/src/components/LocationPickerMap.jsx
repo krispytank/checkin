@@ -68,7 +68,7 @@ function LocationSearch({ onResultSelect }) {
     try {
       const res = await fetch(
         `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1`,
-        { headers: { 'Accept': 'application/json' } }
+        { headers: { 'Accept': 'application/json', 'User-Agent': 'MahakamaAccess/1.0' } }
       );
       const data = await res.json();
       setResults(data);
