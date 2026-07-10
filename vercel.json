@@ -1,4 +1,4 @@
 {
   "version": 2,
-  "image": "Dockerfile"
+  "image": "Dockerfile.vercel"
 }
