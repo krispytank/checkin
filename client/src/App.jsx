@@ -17,7 +17,7 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <ErrorBoundary>
+    <ErrorBoundary fullPage>
       <QueryClientProvider client={queryClient}>
         <ConfigProvider>
           <ThemeProvider>

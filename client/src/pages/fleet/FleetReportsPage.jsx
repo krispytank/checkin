@@ -215,7 +215,7 @@ export default function FleetReportsPage() {
                   )}
                 </div>
                 <div className="rounded-xl border bg-card p-4">
-                  <h3 className="font-semibold text-sm mb-4">Visitor Parking by Category</h3>
+                  <h3 className="font-semibold text-sm mb-4">Public Parking by Category</h3>
                   {reportData.visitorByCategory?.length > 0 ? (
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>

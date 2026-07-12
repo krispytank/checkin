@@ -6,6 +6,8 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const [verifyToken, setVerifyToken] = useState(localStorage.getItem('verifyToken'));
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState(null);
   const queryClient = useQueryClient();
 
   // Validate token on mount
@@ -27,6 +29,16 @@ export function AuthProvider({ children }) {
       return response.data.data;
     },
     onSuccess: (data) => {
+      if (data.needsVerification) {
+        // Store verify token, don't set auth token
+        localStorage.setItem('verifyToken', data.verifyToken);
+        setVerifyToken(data.verifyToken);
+        setPendingVerificationEmail(data.email);
+        return;
+      }
+      localStorage.removeItem('verifyToken');
+      setVerifyToken(null);
+      setPendingVerificationEmail(null);
       localStorage.setItem('token', data.token);
       setToken(data.token);
       queryClient.setQueryData(['auth', 'me'], data.user);
@@ -60,11 +72,43 @@ export function AuthProvider({ children }) {
     },
   });
 
+  // Send login verification code
+  const sendLoginCodeMutation = useMutation({
+    mutationFn: async (verifyTok) => {
+      const response = await api.post('/auth/send-login-code', { verifyToken: verifyTok });
+      return response.data;
+    },
+  });
+
+  // Verify login code
+  const verifyLoginCodeMutation = useMutation({
+    mutationFn: async ({ verifyToken: vt, code }) => {
+      const response = await api.post('/auth/verify-login-code', { verifyToken: vt, code });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      localStorage.removeItem('verifyToken');
+      setVerifyToken(null);
+      setPendingVerificationEmail(null);
+      localStorage.setItem('token', data.data.token);
+      setToken(data.data.token);
+      queryClient.setQueryData(['auth', 'me'], data.data.user);
+    },
+  });
+
   const login = (email, password) => loginMutation.mutateAsync({ email, password });
-  const logout = () => logoutMutation.mutateAsync();
+  const logout = () => {
+    localStorage.removeItem('verifyToken');
+    setVerifyToken(null);
+    setPendingVerificationEmail(null);
+    return logoutMutation.mutateAsync();
+  };
   const forgotPassword = (email) => forgotPasswordMutation.mutateAsync(email);
   const resetPassword = (token, newPassword) => 
     resetPasswordMutation.mutateAsync({ token, newPassword });
+  const sendLoginCode = (vt) => sendLoginCodeMutation.mutateAsync(vt);
+  const verifyLoginCode = (vt, code) => 
+    verifyLoginCodeMutation.mutateAsync({ verifyToken: vt, code });
 
   const hasRole = (...roles) => {
     if (!user) return false;
@@ -111,6 +155,8 @@ export function AuthProvider({ children }) {
   const value = {
     user: user || null,
     token,
+    verifyToken,
+    pendingVerificationEmail,
     isLoading,
     isAuthenticated: !!user,
     error,
@@ -118,6 +164,8 @@ export function AuthProvider({ children }) {
     logout,
     forgotPassword,
     resetPassword,
+    sendLoginCode,
+    verifyLoginCode,
     hasRole,
     hasModuleAccess,
     hasModuleRole,
@@ -129,6 +177,9 @@ export function AuthProvider({ children }) {
     loginError: loginMutation.error,
     isForgotPasswordPending: forgotPasswordMutation.isPending,
     isResetPasswordPending: resetPasswordMutation.isPending,
+    isSendCodePending: sendLoginCodeMutation.isPending,
+    isVerifyCodePending: verifyLoginCodeMutation.isPending,
+    verifyError: verifyLoginCodeMutation.error,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

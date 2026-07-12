@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils.js';
 import Sidebar from '../components/Sidebar.jsx';
+import ErrorBoundary from '../components/ErrorBoundary.jsx';
 
 const COLLAPSED_KEY = 'sidebar-collapsed';
 
@@ -149,7 +150,9 @@ export default function MainLayout({ children }) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 pb-24 lg:p-6 lg:pb-6">
-          {children}
+          <ErrorBoundary key={location}>
+            {children}
+          </ErrorBoundary>
         </main>
       </div>
 

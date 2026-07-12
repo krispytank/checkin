@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { bookingsAPI, authAPI } from '../../lib/api.js';
+import { useAuth } from '../../contexts/AuthContext.jsx';
+import { bookingsAPI } from '../../lib/api.js';
 import { cn } from '../../lib/utils.js';
 import {
   Loader2, Check, X, Truck, RotateCcw, FileText, Calendar, Clock,
@@ -200,19 +201,13 @@ function BookingCard({ booking, onAction, onViewPdf, role }) {
 
 export default function ManageBookingsPage() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [filterStatus, setFilterStatus] = useState('');
   const [pdfModal, setPdfModal] = useState({ open: false, url: '', title: '' });
 
-  const { data: roleData } = useQuery({
-    queryKey: ['auth', 'me'],
-    queryFn: async () => {
-      const res = await authAPI.me();
-      return res.data;
-    },
-  });
-  const role = roleData?.data?.role;
+  const role = user?.role;
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ['bookings', filterStatus],
     queryFn: async () => {
       const params = {};
@@ -264,6 +259,12 @@ export default function ManageBookingsPage() {
 
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+      ) : error ? (
+        <div className="py-12 text-center text-muted-foreground">
+          <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
+          <p className="text-sm">Failed to load bookings</p>
+          <p className="text-xs mt-1">{error.message || 'An error occurred'}</p>
+        </div>
       ) : bookings.length === 0 ? (
         <div className="py-12 text-center text-muted-foreground">
           <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />

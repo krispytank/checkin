@@ -34,6 +34,8 @@ function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting }) {
   const [formData, setFormData] = useState({
     name: vehicle?.name || '',
     plateNumber: vehicle?.plateNumber || '',
+    vehicleType: vehicle?.vehicleType || 'gov',
+    pjNumber: vehicle?.pjNumber || '',
     employeeNo: vehicle?.employeeNo || '',
     category: vehicle?.category || 'sedan',
     capacity: vehicle?.capacity || 4,
@@ -64,6 +66,23 @@ function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting }) {
             required
           />
         </FormField>
+        <FormField label="Vehicle Type" required>
+          <Select value={formData.vehicleType} onChange={e => setFormData({ ...formData, vehicleType: e.target.value })}>
+            <option value="gov">Government</option>
+            <option value="personal">Personal</option>
+          </Select>
+        </FormField>
+        {formData.vehicleType === 'personal' && (
+          <FormField label="PJ Number" required>
+            <Input
+              type="text"
+              value={formData.pjNumber}
+              onChange={e => setFormData({ ...formData, pjNumber: e.target.value.toUpperCase() })}
+              placeholder="e.g. PJ12345"
+              required={formData.vehicleType === 'personal'}
+            />
+          </FormField>
+        )}
         <div className="sm:col-span-2">
           <UserEmployeeSelect
             value={formData.employeeNo}

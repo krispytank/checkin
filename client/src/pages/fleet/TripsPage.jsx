@@ -1,24 +1,19 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { tripsAPI } from '../../lib/api.js';
-import { Loader2, MapPin, Clock, CheckCircle, Truck, X, ChevronDown, ChevronUp, AlertCircle, Gauge } from 'lucide-react';
+import { tripsAPI, vehicleAPI } from '../../lib/api.js';
+import { Loader2, MapPin, Clock, CheckCircle, Truck, X, ChevronDown, ChevronUp, AlertCircle, Gauge, Plus } from 'lucide-react';
 
-const TRIP_STATUS_CONFIG = {
-  pending: { label: 'Pending', color: 'text-yellow-600', bg: 'bg-yellow-100', icon: Clock },
-  approved: { label: 'Approved', color: 'text-blue-600', bg: 'bg-blue-100', icon: CheckCircle },
-  'in-progress': { label: 'In Progress', color: 'text-purple-600', bg: 'bg-purple-100', icon: Truck },
-  completed: { label: 'Completed', color: 'text-green-600', bg: 'bg-green-100', icon: CheckCircle },
-  rejected: { label: 'Rejected', color: 'text-red-600', bg: 'bg-red-100', icon: X },
+const STATUS_CONFIG = {
+  out: { label: 'Out', color: 'text-amber-600', bg: 'bg-amber-100', icon: Truck },
+  completed: { label: 'Returned', color: 'text-green-600', bg: 'bg-green-100', icon: CheckCircle },
 };
 
-function MileageModal({ title, label, onSubmit, onCancel, isSubmitting, error, initialValue }) {
-  const [value, setValue] = useState(initialValue || '');
+function MileageModal({ title, label, onSubmit, onCancel, isSubmitting, error }) {
+  const [value, setValue] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const num = parseInt(value);
-    if (!num || num <= 0) return;
-    onSubmit(num);
+    onSubmit(value ? parseInt(value) : null);
   };
 
   return (
@@ -42,21 +37,152 @@ function MileageModal({ title, label, onSubmit, onCancel, isSubmitting, error, i
                 value={value}
                 onChange={e => setValue(e.target.value)}
                 className="w-full rounded-lg border bg-background pl-9 pr-3 py-2.5 text-sm"
-                placeholder="e.g. 45000"
-                autoFocus
-                required
+                placeholder="Optional — e.g. 45000"
               />
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1">Odometer reading in km</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Odometer reading in km (optional)</p>
           </div>
           <div className="flex justify-end gap-2">
             <button type="button" onClick={onCancel}
               className="px-4 py-2 text-sm font-medium rounded-lg border hover:bg-muted transition-colors">
               Cancel
             </button>
-            <button type="submit" disabled={isSubmitting || !value}
+            <button type="submit" disabled={isSubmitting}
               className="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">
               {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function DepartureModal({ onClose, onSuccess }) {
+  const queryClient = useQueryClient();
+  const [formData, setFormData] = useState({
+    vehicleId: '',
+    destination: '',
+    purpose: '',
+    departureDate: '',
+    startingMileage: '',
+    passengers: '',
+  });
+
+  const { data: vehiclesData, isLoading: loadingVehicles } = useQuery({
+    queryKey: ['fleet', 'vehicles'],
+    queryFn: async () => {
+      const res = await vehicleAPI.list();
+      return res.data;
+    },
+  });
+
+  const vehicles = (vehiclesData?.data || []).filter(v => v.status !== 'retired' && v.vehicleType === 'gov');
+
+  const createMutation = useMutation({
+    mutationFn: (data) => tripsAPI.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fleet', 'trips'] });
+      onSuccess();
+    },
+  });
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const payload = {
+      destination: formData.destination.trim(),
+      purpose: formData.purpose.trim(),
+      departureDate: formData.departureDate,
+    };
+    if (formData.vehicleId) payload.vehicleId = formData.vehicleId;
+    if (formData.startingMileage) payload.startingMileage = parseInt(formData.startingMileage);
+    if (formData.passengers.trim()) {
+      payload.passengers = formData.passengers.split(',').map(p => p.trim()).filter(Boolean);
+    }
+    createMutation.mutate(payload);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-lg rounded-xl bg-card p-5 shadow-xl max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Record Vehicle Departure</h3>
+          <button onClick={onClose} className="p-1 rounded-lg hover:bg-muted"><X className="h-5 w-5" /></button>
+        </div>
+
+        {createMutation.isError && (
+          <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+            {createMutation.error.response?.data?.message || 'Failed to record departure'}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Vehicle</label>
+            {loadingVehicles ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground py-2.5">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading vehicles...
+              </div>
+            ) : (
+              <select value={formData.vehicleId} onChange={e => setFormData(p => ({ ...p, vehicleId: e.target.value }))}
+                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary">
+                <option value="">Select vehicle (optional)</option>
+                {vehicles.map(v => (
+                  <option key={v._id} value={v._id}>{v.name} — {v.registrationNumber}</option>
+                ))}
+              </select>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Destination *</label>
+            <input type="text" value={formData.destination} onChange={e => setFormData(p => ({ ...p, destination: e.target.value }))}
+              placeholder="e.g. Milimani Law Courts" required
+              className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Purpose *</label>
+            <textarea value={formData.purpose} onChange={e => setFormData(p => ({ ...p, purpose: e.target.value }))}
+              rows={2} placeholder="Why is this trip needed?" required
+              className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Departure Date & Time *</label>
+            <input type="datetime-local" value={formData.departureDate} onChange={e => setFormData(p => ({ ...p, departureDate: e.target.value }))}
+              required className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Starting Mileage (Odometer)</label>
+            <div className="relative">
+              <Gauge className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input type="number" min="0" value={formData.startingMileage}
+                onChange={e => setFormData(p => ({ ...p, startingMileage: e.target.value }))}
+                placeholder="Optional — e.g. 45000"
+                className="w-full rounded-lg border bg-background pl-9 pr-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">Odometer reading in km (optional)</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Passengers</label>
+            <input type="text" value={formData.passengers} onChange={e => setFormData(p => ({ ...p, passengers: e.target.value }))}
+              placeholder="Comma-separated names (optional)"
+              className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary" />
+            <p className="text-[10px] text-muted-foreground mt-1">Separate multiple names with commas</p>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={onClose}
+              className="flex-1 rounded-lg border px-4 py-2.5 text-sm font-medium hover:bg-muted transition-colors">
+              Cancel
+            </button>
+            <button type="submit" disabled={createMutation.isPending}
+              className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">
+              {createMutation.isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+              Record Departure
             </button>
           </div>
         </form>
@@ -70,6 +196,7 @@ export default function TripsPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [expandedTrip, setExpandedTrip] = useState(null);
   const [mileageModal, setMileageModal] = useState(null);
+  const [showForm, setShowForm] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['fleet', 'trips', { status: statusFilter }],
@@ -94,35 +221,34 @@ export default function TripsPage() {
 
   const trips = data?.data || [];
 
-  const handleStartTrip = (trip) => {
-    setMileageModal({ tripId: trip._id, type: 'start', trip });
+  const handleReturn = (trip) => {
+    setMileageModal({ tripId: trip._id, trip });
   };
 
-  const handleCompleteTrip = (trip) => {
-    setMileageModal({ tripId: trip._id, type: 'complete', trip });
-  };
-
-  const handleMileageSubmit = (value) => {
+  const handleMileageSubmit = (endingMileage) => {
     if (!mileageModal) return;
-    const { tripId, type } = mileageModal;
-    if (type === 'start') {
-      statusMutation.mutate({ id: tripId, status: 'in_progress', extra: { startingMileage: value } });
-    } else {
-      statusMutation.mutate({ id: tripId, status: 'completed', extra: { endingMileage: value } });
-    }
+    const extra = {};
+    if (endingMileage !== null) extra.endingMileage = endingMileage;
+    statusMutation.mutate({ id: mileageModal.tripId, status: 'completed', extra });
   };
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold">Trips</h1>
-        <p className="text-xs sm:text-sm text-muted-foreground">Manage vehicle trips</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold">Vehicle Trips</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Record vehicle departures and returns</p>
+        </div>
+        <button onClick={() => setShowForm(true)}
+          className="flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700 active:scale-[0.98]">
+          <Plus className="h-4 w-4" /> Record Departure
+        </button>
       </div>
 
       {/* Status Filter */}
       <div className="flex flex-wrap gap-1.5 sm:gap-2">
-        {['', 'pending', 'approved', 'in-progress', 'completed', 'rejected'].map(status => {
-          const cfg = status ? TRIP_STATUS_CONFIG[status] : null;
+        {['', 'out', 'completed'].map(status => {
+          const cfg = status ? STATUS_CONFIG[status] : null;
           return (
             <button
               key={status}
@@ -139,16 +265,14 @@ export default function TripsPage() {
         })}
       </div>
 
-      {/* Mileage Modal */}
+      {showForm && (
+        <DepartureModal onClose={() => setShowForm(false)} onSuccess={() => setShowForm(false)} />
+      )}
+
       {mileageModal && (
         <MileageModal
-          title={mileageModal.type === 'start' ? 'Start Trip — Record Mileage' : 'Complete Trip — Record Mileage'}
-          label={mileageModal.type === 'start' ? 'Starting Mileage (Odometer)' : 'Ending Mileage (Odometer)'}
-          initialValue={
-            mileageModal.type === 'start'
-              ? mileageModal.trip.startingMileage || ''
-              : mileageModal.trip.startingMileage || ''
-          }
+          title="Record Return — Mileage"
+          label="Ending Mileage (Odometer)"
           onSubmit={handleMileageSubmit}
           onCancel={() => setMileageModal(null)}
           isSubmitting={statusMutation.isPending}
@@ -156,18 +280,17 @@ export default function TripsPage() {
         />
       )}
 
-      {/* Trip List */}
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
       ) : trips.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <MapPin className="h-12 w-12 mx-auto mb-4 opacity-50" />
-          <p className="text-sm">No trips found</p>
+          <p className="text-sm">No trips recorded yet</p>
         </div>
       ) : (
         <div className="space-y-2 sm:space-y-3">
           {trips.map(trip => {
-            const statusCfg = TRIP_STATUS_CONFIG[trip.status] || TRIP_STATUS_CONFIG.pending;
+            const statusCfg = STATUS_CONFIG[trip.status] || STATUS_CONFIG.out;
             const StatusIcon = statusCfg.icon;
             const isExpanded = expandedTrip === trip._id;
 
@@ -182,8 +305,11 @@ export default function TripsPage() {
                       <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-600" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-medium text-sm sm:text-base truncate">{trip.tripId}</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground truncate">{trip.destination}</p>
+                      <p className="font-medium text-sm sm:text-base truncate">{trip.destination}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                        {trip.purpose}
+                        {trip.vehicleDetails && ` • ${trip.vehicleDetails.name}`}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -198,11 +324,19 @@ export default function TripsPage() {
                   <div className="border-t p-3 sm:p-4 space-y-3 sm:space-y-4">
                     <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div>
+                        <p className="text-muted-foreground">Vehicle</p>
+                        <p className="font-medium">{trip.vehicleDetails ? `${trip.vehicleDetails.name} (${trip.vehicleDetails.registrationNumber})` : 'Not assigned'}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Destination</p>
+                        <p className="font-medium">{trip.destination}</p>
+                      </div>
+                      <div>
                         <p className="text-muted-foreground">Purpose</p>
                         <p className="font-medium">{trip.purpose}</p>
                       </div>
                       <div>
-                        <p className="text-muted-foreground">Requested By</p>
+                        <p className="text-muted-foreground">Recorded By</p>
                         <p className="font-medium">{trip.userDetails?.name || 'Unknown'}</p>
                       </div>
                       <div>
@@ -211,17 +345,14 @@ export default function TripsPage() {
                       </div>
                       <div>
                         <p className="text-muted-foreground">Return</p>
-                        <p className="font-medium">{trip.returnDate ? new Date(trip.returnDate).toLocaleString() : 'TBD'}</p>
+                        <p className="font-medium">{trip.actualReturn ? new Date(trip.actualReturn).toLocaleString() : trip.returnDate ? new Date(trip.returnDate).toLocaleString() : '—'}</p>
                       </div>
-                      <div>
-                        <p className="text-muted-foreground">Passengers</p>
-                        <p className="font-medium">{trip.passengers}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground">Vehicle</p>
-                        <p className="font-medium">{trip.vehicleDetails?.name || 'Not assigned'}</p>
-                      </div>
-                      {/* Mileage Info */}
+                      {trip.passengers?.length > 0 && (
+                        <div className="sm:col-span-2">
+                          <p className="text-muted-foreground">Passengers</p>
+                          <p className="font-medium">{Array.isArray(trip.passengers) ? trip.passengers.join(', ') : trip.passengers}</p>
+                        </div>
+                      )}
                       {(trip.startingMileage || trip.endingMileage) && (
                         <>
                           <div>
@@ -250,37 +381,15 @@ export default function TripsPage() {
                       )}
                     </div>
 
-                    {/* Status Actions */}
-                    <div className="flex flex-wrap gap-2 pt-2 border-t">
-                      {trip.status === 'pending' && (
-                        <>
-                          <button onClick={() => statusMutation.mutate({ id: trip._id, status: 'approved' })}
-                            disabled={statusMutation.isPending}
-                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 active:scale-[0.98]">
-                            Approve
-                          </button>
-                          <button onClick={() => statusMutation.mutate({ id: trip._id, status: 'rejected' })}
-                            disabled={statusMutation.isPending}
-                            className="px-3 py-1.5 text-xs font-medium rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50 active:scale-[0.98]">
-                            Reject
-                          </button>
-                        </>
-                      )}
-                      {trip.status === 'approved' && (
-                        <button onClick={() => handleStartTrip(trip)}
-                          disabled={statusMutation.isPending}
-                          className="px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 active:scale-[0.98]">
-                          Start Trip
-                        </button>
-                      )}
-                      {trip.status === 'in-progress' && (
-                        <button onClick={() => handleCompleteTrip(trip)}
+                    {trip.status === 'out' && (
+                      <div className="flex gap-2 pt-2 border-t">
+                        <button onClick={() => handleReturn(trip)}
                           disabled={statusMutation.isPending}
                           className="px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 active:scale-[0.98]">
-                          Complete Trip
+                          Record Return
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -9,6 +9,11 @@ const router = Router();
 
 const VISITOR_CATEGORIES = ['advocate', 'litigant', 'witness', 'government_officer', 'other'];
 
+function maskPhone(phone) {
+  if (!phone || phone.length < 6) return phone || '';
+  return phone.slice(0, 3) + '***' + phone.slice(-3);
+}
+
 // GET /api/visitor-parking
 router.get('/', authenticate, async (req, res, next) => {
   try {
@@ -31,9 +36,14 @@ router.get('/', authenticate, async (req, res, next) => {
       db.collection('visitor_parking').countDocuments(filter),
     ]);
 
+    const maskedVisitors = visitors.map(v => ({
+      ...v,
+      phoneNumber: v.phoneNumber ? maskPhone(v.phoneNumber) : null,
+    }));
+
     res.json({
       success: true,
-      data: visitors,
+      data: maskedVisitors,
       pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum) },
     });
   } catch (error) {
@@ -79,7 +89,7 @@ router.get('/stats', authenticate, async (req, res, next) => {
 router.post('/check-in', authenticate, async (req, res, next) => {
   try {
     const {
-      vehicleRegNumber, ownerName, category, purposeOfVisit,
+      vehicleRegNumber, ownerName, phoneNumber, category, purposeOfVisit,
       courtStationId, courtBeingVisited, parkingSpaceId, parkingLotId,
     } = req.body;
 
@@ -108,6 +118,7 @@ router.post('/check-in', authenticate, async (req, res, next) => {
     const entry = {
       vehicleRegNumber: vehicleRegNumber.toUpperCase().trim(),
       ownerName: ownerName.trim(),
+      phoneNumber: phoneNumber?.trim() || null,
       category,
       purposeOfVisit: purposeOfVisit?.trim() || '',
       courtStationId,
@@ -180,6 +191,146 @@ router.put('/:id/check-out', authenticate, async (req, res, next) => {
     });
 
     res.json({ success: true, message: 'Visitor vehicle checked out' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/visitor-parking/reports - Comprehensive parking reports
+router.get('/reports', authenticate, async (req, res, next) => {
+  try {
+    const db = getDB();
+    const { startDate, endDate, courtStationId } = req.query;
+
+    const dateFilter = {};
+    if (startDate) dateFilter.$gte = new Date(startDate);
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      dateFilter.$lte = end;
+    }
+
+    const baseMatch = {};
+    if (Object.keys(dateFilter).length > 0) baseMatch.timeIn = dateFilter;
+    if (courtStationId) baseMatch.courtStationId = courtStationId;
+
+    // 1. Currently parked
+    const currentlyParked = await db.collection('visitor_parking').countDocuments({
+      ...baseMatch, status: 'parked',
+    });
+
+    // 2. Total visits in period
+    const totalVisits = await db.collection('visitor_parking').countDocuments(baseMatch);
+
+    // 3. Average duration (minutes) for checked-out visitors
+    const avgDuration = await db.collection('visitor_parking').aggregate([
+      { $match: { ...baseMatch, status: 'checked_out', timeOut: { $exists: true, $ne: null } } },
+      { $project: { duration: { $subtract: ['$timeOut', '$timeIn'] } } },
+      { $group: { _id: null, avgMs: { $avg: '$duration' } } },
+    ]).toArray();
+
+    const avgDurationMinutes = avgDuration[0] ? Math.round(avgDuration[0].avgMs / 60000) : 0;
+
+    // 4. By category
+    const byCategory = await db.collection('visitor_parking')
+      .aggregate([
+        { $match: baseMatch },
+        { $group: { _id: '$category', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ])
+      .toArray();
+
+    // 5. By station
+    const byStation = await db.collection('visitor_parking')
+      .aggregate([
+        { $match: baseMatch },
+        { $group: { _id: '$courtStationId', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ])
+      .toArray();
+
+    // Enrich station names
+    const stationIds = byStation.map(s => { try { return new ObjectId(s._id); } catch { return null; } }).filter(Boolean);
+    const stations = await db.collection('stations').find({ _id: { $in: stationIds } }).toArray();
+    const stationMap = Object.fromEntries(stations.map(s => [s._id.toString(), s.name]));
+    const byStationEnriched = byStation.map(s => ({
+      stationName: stationMap[s._id] || 'Unknown',
+      count: s.count,
+    }));
+
+    // 6. By hour of day (peak hours)
+    const byHour = await db.collection('visitor_parking')
+      .aggregate([
+        { $match: baseMatch },
+        { $project: { hour: { $hour: '$timeIn' } } },
+        { $group: { _id: '$hour', count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray();
+
+    // 7. By day of week
+    const byDayOfWeek = await db.collection('visitor_parking')
+      .aggregate([
+        { $match: baseMatch },
+        { $project: { dayOfWeek: { $dayOfWeek: '$timeIn' } } },
+        { $group: { _id: '$dayOfWeek', count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray();
+
+    const DAY_NAMES = ['', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const byDayEnriched = byDayOfWeek.map(d => ({ day: DAY_NAMES[d._id] || d._id, count: d.count }));
+
+    // 8. Daily trend
+    const dailyTrend = await db.collection('visitor_parking')
+      .aggregate([
+        { $match: baseMatch },
+        { $project: { date: { $dateToString: { format: '%Y-%m-%d', date: '$timeIn' } } } },
+        { $group: { _id: '$date', count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ])
+      .toArray();
+
+    // 9. Recent visitors (last 20)
+    const recentVisitors = await db.collection('visitor_parking')
+      .find(baseMatch)
+      .sort({ timeIn: -1 })
+      .limit(20)
+      .toArray();
+
+    // 10. Repeat visitors (most frequent)
+    const repeatVisitors = await db.collection('visitor_parking')
+      .aggregate([
+        { $match: baseMatch },
+        { $group: { _id: '$ownerName', visits: { $sum: 1 }, vehicles: { $addToSet: '$vehicleRegNumber' } } },
+        { $match: { visits: { $gt: 1 } } },
+        { $sort: { visits: -1 } },
+        { $limit: 10 },
+      ])
+      .toArray();
+
+    res.json({
+      success: true,
+      data: {
+        currentlyParked,
+        totalVisits,
+        avgDurationMinutes,
+        byCategory,
+        byStation: byStationEnriched,
+        byHour: byHour.map(h => ({ hour: h._id, count: h.count })),
+        byDayOfWeek: byDayEnriched,
+        dailyTrend: dailyTrend.map(d => ({ date: d._id, count: d.count })),
+        recentVisitors: recentVisitors.map(v => ({
+          ...v,
+          phoneNumber: v.phoneNumber ? maskPhone(v.phoneNumber) : null,
+        })),
+        repeatVisitors: repeatVisitors.map(r => ({
+          name: r._id,
+          visits: r.visits,
+          vehicles: r.vehicles,
+        })),
+      },
+    });
   } catch (error) {
     next(error);
   }

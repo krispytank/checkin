@@ -31,6 +31,8 @@ function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting }) {
   const [formData, setFormData] = useState({
     name: vehicle?.name || '',
     plateNumber: vehicle?.plateNumber || '',
+    vehicleType: vehicle?.vehicleType || 'gov',
+    pjNumber: vehicle?.pjNumber || '',
     employeeNo: vehicle?.employeeNo || '',
     category: vehicle?.category || 'sedan',
     capacity: vehicle?.capacity || 4,
@@ -57,6 +59,25 @@ function VehicleForm({ vehicle, onSubmit, onCancel, isSubmitting }) {
             onChange={e => setFormData({ ...formData, plateNumber: e.target.value.toUpperCase() })}
             className="w-full rounded-lg border bg-background px-3 py-2 text-sm" required />
         </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Vehicle Type *</label>
+          <select value={formData.vehicleType}
+            onChange={e => setFormData({ ...formData, vehicleType: e.target.value })}
+            className="w-full rounded-lg border bg-background px-3 py-2 text-sm">
+            <option value="gov">Government</option>
+            <option value="personal">Personal</option>
+          </select>
+        </div>
+        {formData.vehicleType === 'personal' && (
+          <div>
+            <label className="block text-sm font-medium mb-1">PJ Number *</label>
+            <input type="text" value={formData.pjNumber}
+              onChange={e => setFormData({ ...formData, pjNumber: e.target.value.toUpperCase() })}
+              placeholder="e.g. PJ12345"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+              required={formData.vehicleType === 'personal'} />
+          </div>
+        )}
         <div className="sm:col-span-2">
           <UserEmployeeSelect
             value={formData.employeeNo}

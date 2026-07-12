@@ -25,7 +25,9 @@ const fleetNavigation = [
   { name: 'Trips', href: '/fleet/trips', icon: Truck },
   { name: 'Parking', href: '/fleet/parking', icon: MapPin },
   { name: 'Check In/Out', href: '/fleet/checkin', icon: QrCode },
+  { name: 'Public', href: '/fleet/visitors', icon: Users },
   { name: 'Reports', href: '/fleet/reports', icon: FileText, roles: ['admin', 'supervisor', 'manager'] },
+  { name: 'Parking Reports', href: '/fleet/parking-reports', icon: FileText, roles: ['admin', 'supervisor', 'manager'] },
 ];
 
 const equipmentNavigation = [

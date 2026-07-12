@@ -69,7 +69,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
+      connectSrc: ["'self'", "https://nominatim.openstreetmap.org"],
       frameSrc: ["'none'"],
       objectSrc: ["'none'"],
     },

@@ -7,6 +7,7 @@ export default {
       properties: {
         vehicleRegNumber: { bsonType: 'string' },
         ownerName: { bsonType: 'string' },
+        phoneNumber: { bsonType: ['string', 'null'] },
         category: { bsonType: 'string' },
         purposeOfVisit: { bsonType: 'string' },
         courtStationId: { bsonType: 'string' },

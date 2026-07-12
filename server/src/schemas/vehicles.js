@@ -3,10 +3,12 @@ export default {
   validator: {
     $jsonSchema: {
       bsonType: 'object',
-      required: ['name', 'plateNumber'],
+      required: ['name', 'plateNumber', 'vehicleType'],
       properties: {
         name: { bsonType: 'string', description: 'Name is required' },
         plateNumber: { bsonType: 'string', description: 'Plate number is required' },
+        vehicleType: { enum: ['gov', 'personal'], description: 'Must be gov or personal' },
+        pjNumber: { bsonType: ['string', 'null'] },
         employeeNo: { bsonType: ['string', 'null'] },
         category: { bsonType: 'string' },
         capacity: { bsonType: 'int' },

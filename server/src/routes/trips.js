@@ -4,23 +4,8 @@ import { getDB } from '../db.js';
 import { authenticate, authorizeModule } from '../middleware/auth.js';
 import { validateRequired, validatePagination } from '../middleware/validation.js';
 import { logAudit, serializeForAudit } from '../utils/audit.js';
-import { sendSystemNotification } from './notifications.js';
 
 const router = Router();
-
-const VALID_TRIP_TRANSITIONS = {
-  requested: ['supervisor_approved'],
-  supervisor_approved: ['fleet_approved', 'rejected'],
-  fleet_approved: ['vehicle_assigned'],
-  vehicle_assigned: ['in_progress'],
-  in_progress: ['completed'],
-  completed: [],
-  rejected: [],
-  // Legacy compatibility
-  pending: ['approved', 'rejected'],
-  approved: ['in-progress'],
-  'in-progress': ['completed'],
-};
 
 const enrichTrip = async (db, trip) => {
   const safeLookup = async (collection, id) => {
@@ -32,40 +17,15 @@ const enrichTrip = async (db, trip) => {
     }
   };
 
-  const [vehicle, user, driver, requestingOfficer] = await Promise.all([
+  const [vehicle, user] = await Promise.all([
     safeLookup('vehicles', trip.vehicleId),
     trip.userId ? db.collection('users').findOne({ _id: new ObjectId(trip.userId) }, { projection: { password: 0 } }).catch(() => null) : null,
-    safeLookup('users', trip.driverId),
-    safeLookup('users', trip.requestingOfficerId),
   ]);
-
-  // Enrich passengers
-  let enrichedPassengers = [];
-  if (trip.passengers && Array.isArray(trip.passengers) && trip.passengers.length > 0) {
-    const passengerIds = trip.passengers
-      .map(p => typeof p === 'string' ? p : p.userId)
-      .filter(Boolean);
-    if (passengerIds.length > 0) {
-      const passengerUsers = await db.collection('users')
-        .find({ _id: { $in: passengerIds.map(id => { try { return new ObjectId(id); } catch { return id; } }) } }, { projection: { password: 0 } })
-        .toArray();
-      const passengerMap = Object.fromEntries(passengerUsers.map(u => [u._id.toString(), u]));
-      enrichedPassengers = trip.passengers.map(p => {
-        const id = typeof p === 'string' ? p : p.userId;
-        return { ...p, userDetails: passengerMap[id] || null };
-      });
-    } else {
-      enrichedPassengers = trip.passengers;
-    }
-  }
 
   return {
     ...trip,
     vehicleDetails: vehicle,
     userDetails: user,
-    driverDetails: driver,
-    requestingOfficerDetails: requestingOfficer,
-    passengersEnriched: enrichedPassengers,
   };
 };
 
@@ -128,12 +88,12 @@ router.get('/:id', authenticate, async (req, res, next) => {
   }
 });
 
-// POST /api/trips - Create trip
+// POST /api/trips - Record vehicle departure
 router.post('/', authenticate, authorizeModule('fleet', 'admin', 'manager', 'user'), async (req, res, next) => {
   try {
     const {
       vehicleId, destination, purpose, departureDate, returnDate, passengers = [],
-      requestingOfficerId, expectedDeparture, expectedReturn,
+      startingMileage,
     } = req.body;
 
     const destError = validateRequired(destination, 'Destination');
@@ -159,13 +119,10 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin', 'manager', 'use
     if (validVehicleId) {
       const conflict = await db.collection('trips').findOne({
         vehicleId: validVehicleId.toString(),
-        status: { $in: ['pending', 'approved', 'in-progress'] },
-        $or: [
-          { departureDate: { $lte: new Date(returnDate || departureDate) }, returnDate: { $gte: new Date(departureDate) } },
-        ],
+        status: 'out',
       });
       if (conflict) {
-        return res.status(409).json({ success: false, message: 'Vehicle is already booked for this date range' });
+        return res.status(409).json({ success: false, message: 'Vehicle is already out on a trip' });
       }
     }
 
@@ -174,23 +131,19 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin', 'manager', 'use
       tripId,
       vehicleId: validVehicleId ? validVehicleId.toString() : null,
       userId: req.user._id.toString(),
-      driverId: null,
-      requestingOfficerId: requestingOfficerId || req.user._id.toString(),
       destination: destination.trim(),
       purpose: purpose.trim(),
       departureDate: new Date(departureDate),
       returnDate: returnDate ? new Date(returnDate) : null,
-      expectedDeparture: expectedDeparture ? new Date(expectedDeparture) : null,
-      actualDeparture: null,
-      expectedReturn: expectedReturn ? new Date(expectedReturn) : null,
+      actualDeparture: new Date(),
       actualReturn: null,
       passengers: Array.isArray(passengers) ? passengers : [],
-      startingMileage: null,
+      startingMileage: startingMileage ? parseInt(startingMileage) : null,
       endingMileage: null,
       distanceCovered: null,
-      status: 'pending',
+      status: 'out',
       history: [{
-        status: 'pending',
+        status: 'out',
         changedBy: req.user._id.toString(),
         changedAt: new Date(),
       }],
@@ -205,29 +158,11 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin', 'manager', 'use
     if (validVehicleId) {
       await db.collection('vehicles').updateOne(
         { _id: validVehicleId },
-        { $set: { status: 'booked', updatedAt: new Date() } }
+        { $set: { status: 'in-use', updatedAt: new Date() } }
       );
     }
 
     const enriched = await enrichTrip(db, newTrip);
-
-    // Notify fleet admins/managers of new trip request
-    const fleetApprovers = await db.collection('users').find({
-      $or: [
-        { role: 'admin' },
-        { 'moduleAccess.fleet.role': { $in: ['admin', 'manager'] } },
-      ],
-    }).toArray();
-    for (const approver of fleetApprovers) {
-      if (approver._id.toString() !== req.user._id.toString()) {
-        await sendSystemNotification(
-          db, approver._id.toString(), 'approvalRequired',
-          `New trip request: ${tripId}`,
-          `${req.user.name || 'A user'} has requested a trip to ${destination.trim()} for ${purpose.trim()}.`,
-          '/fleet/trips',
-        );
-      }
-    }
 
     res.status(201).json({ success: true, data: enriched });
   } catch (error) {
@@ -235,13 +170,10 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin', 'manager', 'use
   }
 });
 
-// PUT /api/trips/:id/status - Update trip status
+// PUT /api/trips/:id/status - Update trip status (record return)
 router.put('/:id/status', authenticate, async (req, res, next) => {
   try {
-    const {
-      status, driverId, startingMileage, endingMileage, distanceCovered,
-      actualDeparture, actualReturn, vehicleId: newVehicleId,
-    } = req.body;
+    const { status, endingMileage } = req.body;
     const db = getDB();
 
     let trip;
@@ -255,42 +187,22 @@ router.put('/:id/status', authenticate, async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Trip not found' });
     }
 
-    // Validate transition
-    if (!VALID_TRIP_TRANSITIONS[trip.status]?.includes(status)) {
+    // Only allow out → completed
+    if (trip.status !== 'out' || status !== 'completed') {
       return res.status(400).json({
         success: false,
         message: `Cannot transition from ${trip.status} to ${status}`,
       });
     }
 
-    // Permission checks
-    const isAdmin = req.user.role === 'admin';
-    const isFleetAdmin = req.user.moduleAccess?.fleet?.role === 'admin';
-    const isFleetManager = req.user.moduleAccess?.fleet?.role === 'manager';
-
-    if (['approved', 'supervisor_approved', 'fleet_approved', 'rejected', 'vehicle_assigned'].includes(status)
-        && !isAdmin && !isFleetAdmin && !isFleetManager) {
-      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
-    }
-
-    if (status === 'in_progress' && !isAdmin && !isFleetAdmin && !isFleetManager) {
-      return res.status(403).json({ success: false, message: 'Insufficient permissions' });
-    }
-
     const previousTrip = serializeForAudit(trip);
 
-    // Update status
-    const updateData = { status, updatedAt: new Date() };
-    if (driverId) updateData.driverId = driverId;
-    if (startingMileage !== undefined) updateData.startingMileage = parseInt(startingMileage);
-    if (endingMileage !== undefined) updateData.endingMileage = parseInt(endingMileage);
-    if (distanceCovered !== undefined) updateData.distanceCovered = parseInt(distanceCovered);
-    if (actualDeparture) updateData.actualDeparture = new Date(actualDeparture);
-    if (actualReturn) updateData.actualReturn = new Date(actualReturn);
-
-    // Handle vehicle assignment
-    if (newVehicleId) {
-      updateData.vehicleId = newVehicleId;
+    const updateData = { status: 'completed', actualReturn: new Date(), updatedAt: new Date() };
+    if (endingMileage !== undefined && endingMileage !== null) {
+      updateData.endingMileage = parseInt(endingMileage);
+      if (trip.startingMileage) {
+        updateData.distanceCovered = parseInt(endingMileage) - trip.startingMileage;
+      }
     }
 
     await db.collection('trips').updateOne(
@@ -299,7 +211,7 @@ router.put('/:id/status', authenticate, async (req, res, next) => {
         $set: updateData,
         $push: {
           history: {
-            status,
+            status: 'completed',
             changedBy: req.user._id.toString(),
             changedAt: new Date(),
           },
@@ -307,25 +219,16 @@ router.put('/:id/status', authenticate, async (req, res, next) => {
       },
     );
 
-    // Update vehicle status based on trip status
-    const activeVehicleId = newVehicleId || trip.vehicleId;
-    if (status === 'in_progress' && activeVehicleId) {
+    // Update vehicle status back to available
+    if (trip.vehicleId) {
+      const vehicleUpdate = { status: 'available', updatedAt: new Date() };
+      if (endingMileage) {
+        vehicleUpdate.currentMileage = parseInt(endingMileage);
+        vehicleUpdate.mileage = parseInt(endingMileage);
+      }
       await db.collection('vehicles').updateOne(
-        { _id: new ObjectId(activeVehicleId) },
-        { $set: { status: 'in-use', updatedAt: new Date() } },
-      );
-    } else if (status === 'completed' && activeVehicleId) {
-      const updateVehicleFields = { status: 'available', updatedAt: new Date() };
-      if (endingMileage) updateVehicleFields.currentMileage = parseInt(endingMileage);
-      if (endingMileage) updateVehicleFields.mileage = parseInt(endingMileage);
-      await db.collection('vehicles').updateOne(
-        { _id: new ObjectId(activeVehicleId) },
-        { $set: updateVehicleFields },
-      );
-    } else if (status === 'rejected' && activeVehicleId) {
-      await db.collection('vehicles').updateOne(
-        { _id: new ObjectId(activeVehicleId) },
-        { $set: { status: 'available', updatedAt: new Date() } },
+        { _id: new ObjectId(trip.vehicleId) },
+        { $set: vehicleUpdate },
       );
     }
 
@@ -334,24 +237,15 @@ router.put('/:id/status', authenticate, async (req, res, next) => {
     await logAudit({
       userId: req.user._id.toString(),
       userName: req.user.name,
-      action: status,
+      action: 'completed',
       module: 'fleet',
       entityType: 'trip',
       entityId: req.params.id,
       previousValue: previousTrip,
       newValue: serializeForAudit(updated),
       ipAddress: req.ip,
-      description: `Trip ${trip.tripId} status changed to ${status}`,
+      description: `Trip ${trip.tripId} completed`,
     });
-
-    // Send notifications
-    if (['approved', 'supervisor_approved', 'fleet_approved'].includes(status)) {
-      await sendSystemNotification(
-        db, trip.userId, 'tripApproved',
-        `Trip ${trip.tripId} ${status.replace(/_/g, ' ')}`,
-        `Your trip request ${trip.tripId} to ${trip.destination} has been ${status.replace(/_/g, ' ')}.`,
-      );
-    }
 
     const enriched = await enrichTrip(db, updated);
     res.json({ success: true, data: enriched });

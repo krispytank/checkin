@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { api } from '../lib/api.js';
 import { Loader2, ArrowLeft, CheckCircle } from 'lucide-react';
 
 const emailSchema = z.object({
@@ -20,8 +21,14 @@ const resetSchema = z.object({
 });
 
 export default function ForgotPasswordPage() {
-  const [step, setStep] = useState(1); // 1: email, 2: reset
-  const [resetToken, setResetToken] = useState('');
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlToken = urlParams.get('token');
+  const shortId = urlParams.get('id');
+
+  const [step, setStep] = useState(urlToken || shortId ? 2 : 1);
+  const [resetToken, setResetToken] = useState(urlToken || '');
+  const [loadingToken, setLoadingToken] = useState(!!shortId && !urlToken);
+  const [tokenError, setTokenError] = useState('');
   const { forgotPassword, resetPassword, isForgotPasswordPending, isResetPasswordPending } = useAuth();
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -32,7 +39,27 @@ export default function ForgotPasswordPage() {
 
   const resetForm = useForm({
     resolver: zodResolver(resetSchema),
+    defaultValues: {
+      token: urlToken || '',
+    },
   });
+
+  // If URL has shortId, fetch the full token
+  useEffect(() => {
+    if (shortId && !urlToken) {
+      setLoadingToken(true);
+      api.get(`/auth/reset-lookup/${shortId}`)
+        .then((res) => {
+          const token = res.data.data.token;
+          setResetToken(token);
+          resetForm.setValue('token', token);
+        })
+        .catch(() => {
+          setTokenError('Invalid or expired reset link');
+        })
+        .finally(() => setLoadingToken(false));
+    }
+  }, [shortId, urlToken, resetForm]);
 
   const onEmailSubmit = async (data) => {
     try {
@@ -64,7 +91,7 @@ export default function ForgotPasswordPage() {
             </div>
             <h1 className="mt-6 text-2xl font-bold">Password Reset Successful</h1>
             <p className="mt-2 text-muted-foreground">
-              Your password has been reset successfully.
+              Your password has been reset. You'll need to verify your identity on next login.
             </p>
           </div>
           <Link
@@ -81,7 +108,6 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="w-full max-w-md space-y-8">
-        {/* Logo and title */}
         <div className="text-center">
           <img src="/jud-logo.png" alt="Mahakama" className="mx-auto h-16 w-16 rounded-2xl object-contain" />
           <h1 className="mt-6 text-2xl font-bold">
@@ -94,15 +120,21 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
 
-        {/* Form */}
         <div className="rounded-xl border bg-card p-6 shadow-sm">
-          {error && (
+          {(error || tokenError) && (
             <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-              {error}
+              {error || tokenError}
             </div>
           )}
 
-          {step === 1 ? (
+          {loadingToken && (
+            <div className="flex flex-col items-center gap-3 py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">Loading reset form...</p>
+            </div>
+          )}
+
+          {!loadingToken && !tokenError && (step === 1 ? (
             <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-4">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium mb-1">
@@ -147,9 +179,14 @@ export default function ForgotPasswordPage() {
                 <input
                   id="token"
                   type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  autoComplete="off"
+                  onPaste={(e) => e.preventDefault()}
+                  onCopy={(e) => e.preventDefault()}
                   {...resetForm.register('token')}
                   className="w-full rounded-lg border bg-background px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Enter reset code"
+                  placeholder="Enter 6-digit code from email"
                 />
                 {resetForm.formState.errors.token && (
                   <p className="mt-1 text-sm text-destructive">
@@ -196,10 +233,10 @@ export default function ForgotPasswordPage() {
 
               <button
                 type="submit"
-                disabled={resetPassword.isPending}
+                disabled={isResetPasswordPending}
                 className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
-                {resetPassword.isPending ? (
+                {isResetPasswordPending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Resetting...
@@ -209,7 +246,7 @@ export default function ForgotPasswordPage() {
                 )}
               </button>
             </form>
-          )}
+          ))}
 
           <div className="mt-4">
             <Link

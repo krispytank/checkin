@@ -228,6 +228,7 @@ export const parkingLotsAPI = {
 export const visitorParkingAPI = {
   list: (params) => api.get('/visitor-parking', { params }),
   stats: (params) => api.get('/visitor-parking/stats', { params }),
+  reports: (params) => api.get('/visitor-parking/reports', { params }),
   checkIn: (data) => api.post('/visitor-parking/check-in', data),
   checkOut: (id) => api.put(`/visitor-parking/${id}/check-out`),
   delete: (id) => api.delete(`/visitor-parking/${id}`),

@@ -28,11 +28,24 @@ const enrichBooking = async (db, booking) => {
     caseIdObj ? db.collection('cases').findOne({ _id: caseIdObj }) : null,
   ]);
 
+  const history = booking.history || [];
+  const historyUserIds = [...new Set(history.map(h => h.changedBy).filter(Boolean))];
+  const historyUserIdsObj = historyUserIds.map(id => { try { return new ObjectId(id); } catch { return null; } }).filter(Boolean);
+  const historyUsers = historyUserIdsObj.length
+    ? await db.collection('users').find({ _id: { $in: historyUserIdsObj } }, { projection: { name: 1 } }).toArray()
+    : [];
+  const historyUserMap = Object.fromEntries(historyUsers.map(u => [u._id.toString(), u.name]));
+  const enrichedHistory = history.map(h => ({
+    ...h,
+    changedBy: h.changedBy ? { _id: h.changedBy, name: historyUserMap[h.changedBy] || 'System' } : { name: 'System' },
+  }));
+
   return {
     ...booking,
     userDetails: user,
     equipmentDetails: equipment,
     caseDetails: caseItem,
+    history: enrichedHistory,
   };
 };
 

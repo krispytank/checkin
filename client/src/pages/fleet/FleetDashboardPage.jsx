@@ -57,7 +57,7 @@ export default function FleetDashboardPage() {
       <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-3">
         <StatCard icon={Truck} label="Trips/Month" value={t.thisMonth || 0} color="text-blue-600 bg-blue-50" />
         <StatCard icon={CheckCircle} label="Completed" value={t.completedThisMonth || 0} color="text-green-600 bg-green-50" />
-        <StatCard icon={Users} label="Visitors" value={stats.visitorParking?.currentlyParked || 0} color="text-indigo-600 bg-indigo-50" />
+        <StatCard icon={Users} label="Public Parking" value={stats.visitorParking?.currentlyParked || 0} color="text-indigo-600 bg-indigo-50" />
       </div>
 
       {/* Alerts Row */}
@@ -153,7 +153,7 @@ export default function FleetDashboardPage() {
             { label: 'Vehicles', href: '/fleet/vehicles', icon: Car, color: 'bg-slate-50 text-slate-600' },
             { label: 'Trips', href: '/fleet/trips', icon: Truck, color: 'bg-blue-50 text-blue-600' },
             { label: 'Parking', href: '/fleet/parking', icon: MapPin, color: 'bg-emerald-50 text-emerald-600' },
-            { label: 'Visitor Parking', href: '/fleet/parking', icon: Users, color: 'bg-indigo-50 text-indigo-600' },
+            { label: 'Public Parking', href: '/fleet/visitors', icon: Users, color: 'bg-indigo-50 text-indigo-600' },
           ].map(action => (
             <Link key={action.label} href={action.href}
               className="flex items-center gap-2.5 sm:gap-3 rounded-xl border bg-card p-2.5 sm:p-3 shadow-sm hover:shadow-md transition-shadow active:scale-[0.98]">

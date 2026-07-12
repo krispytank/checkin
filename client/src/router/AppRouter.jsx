@@ -18,6 +18,7 @@ function PageLoader() {
 // Lazy-loaded page components (code-split into separate chunks)
 const LoginPage = lazy(() => import('../pages/LoginPage.jsx'));
 const ForgotPasswordPage = lazy(() => import('../pages/ForgotPasswordPage.jsx'));
+const VerifyLoginPage = lazy(() => import('../pages/VerifyLoginPage.jsx'));
 const LandingPage = lazy(() => import('../pages/LandingPage.jsx'));
 const ProfilePage = lazy(() => import('../pages/ProfilePage.jsx'));
 const NotFoundPage = lazy(() => import('../pages/NotFoundPage.jsx'));
@@ -40,7 +41,9 @@ const VehiclesPage = lazy(() => import('../pages/fleet/VehiclesPage.jsx'));
 const TripsPage = lazy(() => import('../pages/fleet/TripsPage.jsx'));
 const ParkingPage = lazy(() => import('../pages/fleet/ParkingPage.jsx'));
 const CheckInOutPage = lazy(() => import('../pages/fleet/CheckInOutPage.jsx'));
+const VisitorGatePage = lazy(() => import('../pages/fleet/VisitorGatePage.jsx'));
 const FleetReportsPage = lazy(() => import('../pages/fleet/FleetReportsPage.jsx'));
+const ParkingReportsPage = lazy(() => import('../pages/fleet/ParkingReportsPage.jsx'));
 
 // File movement module
 const FileMovementDashboardPage = lazy(() => import('../pages/fileMovement/FileMovementDashboardPage.jsx'));
@@ -115,6 +118,16 @@ export default function AppRouter() {
         <Route path="/forgot-password">
           <PublicRoute>
             <ForgotPasswordPage />
+          </PublicRoute>
+        </Route>
+        <Route path="/reset-password">
+          <PublicRoute>
+            <ForgotPasswordPage />
+          </PublicRoute>
+        </Route>
+        <Route path="/verify-login">
+          <PublicRoute>
+            <VerifyLoginPage />
           </PublicRoute>
         </Route>
 
@@ -228,10 +241,24 @@ export default function AppRouter() {
             </MainLayout>
           </ProtectedRoute>
         </Route>
+        <Route path="/fleet/visitors">
+          <ProtectedRoute>
+            <MainLayout module="fleet">
+              <VisitorGatePage />
+            </MainLayout>
+          </ProtectedRoute>
+        </Route>
         <Route path="/fleet/reports">
           <ProtectedRoute>
             <MainLayout module="fleet">
               <FleetReportsPage />
+            </MainLayout>
+          </ProtectedRoute>
+        </Route>
+        <Route path="/fleet/parking-reports">
+          <ProtectedRoute>
+            <MainLayout module="fleet">
+              <ParkingReportsPage />
             </MainLayout>
           </ProtectedRoute>
         </Route>

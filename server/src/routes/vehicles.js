@@ -363,7 +363,7 @@ router.get('/:id', authenticate, async (req, res, next) => {
 router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, res, next) => {
   try {
     const {
-      name, plateNumber, employeeNo = '', category = 'sedan', capacity = 4, description = '',
+      name, plateNumber, vehicleType = 'gov', pjNumber, employeeNo = '', category = 'sedan', capacity = 4, description = '',
       make, model, year, fuelType, insuranceExpiry, inspectionExpiry, serviceSchedule,
       currentMileage, assignedDriverId, assignedParkingLotId, assignedStationId,
     } = req.body;
@@ -372,6 +372,9 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, re
     if (nameError) return res.status(400).json({ success: false, message: nameError });
     const plateError = validateRequired(plateNumber, 'Plate Number');
     if (plateError) return res.status(400).json({ success: false, message: plateError });
+    if (!['gov', 'personal'].includes(vehicleType)) {
+      return res.status(400).json({ success: false, message: 'Vehicle type must be gov or personal' });
+    }
 
     const db = getDB();
 
@@ -397,6 +400,8 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, re
     const newVehicle = {
       name: name.trim(),
       plateNumber: plateNumber.toUpperCase().trim(),
+      vehicleType,
+      pjNumber: vehicleType === 'personal' ? (pjNumber?.trim() || null) : null,
       employeeNo: employeeNo.trim(),
       category,
       capacity: parseInt(capacity) || 4,
@@ -435,7 +440,7 @@ router.post('/', authenticate, authorizeModule('fleet', 'admin'), async (req, re
 router.put('/:id', authenticate, authorizeModule('fleet', 'admin'), async (req, res, next) => {
   try {
     const {
-      name, plateNumber, employeeNo, category, capacity, description, status, mileage,
+      name, plateNumber, vehicleType, pjNumber, employeeNo, category, capacity, description, status, mileage,
       make, model, year, fuelType, insuranceExpiry, inspectionExpiry, serviceSchedule,
       currentMileage, assignedDriverId, assignedParkingLotId, assignedStationId,
     } = req.body;
@@ -455,6 +460,8 @@ router.put('/:id', authenticate, authorizeModule('fleet', 'admin'), async (req, 
     const updateData = { updatedAt: new Date() };
     if (name) updateData.name = name.trim();
     if (plateNumber) updateData.plateNumber = plateNumber.toUpperCase().trim();
+    if (vehicleType !== undefined) updateData.vehicleType = vehicleType;
+    if (pjNumber !== undefined) updateData.pjNumber = vehicleType === 'personal' ? (pjNumber?.trim() || null) : null;
     if (employeeNo !== undefined) {
       const newEmpNo = employeeNo.trim();
       // Validate max 2 cars if changing employee

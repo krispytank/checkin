@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'wouter';
+import { useState, useEffect } from 'react';
+import { Link, useLocation } from 'wouter';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -13,7 +13,8 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
-  const { login, isLoggingIn, loginError } = useAuth();
+  const [, navigate] = useLocation();
+  const { login, isLoggingIn, loginError, verifyToken } = useAuth();
 
   const {
     register,
@@ -22,6 +23,13 @@ export default function LoginPage() {
   } = useForm({
     resolver: zodResolver(loginSchema),
   });
+
+  // Redirect to verify page if verification is pending
+  useEffect(() => {
+    if (verifyToken) {
+      navigate('/verify-login');
+    }
+  }, [verifyToken, navigate]);
 
   const onSubmit = async (data) => {
     await login(data.email, data.password);
