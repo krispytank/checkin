@@ -334,6 +334,11 @@ function UserFormModal({ user, stations, jobTitles, departments, onClose, onSucc
     stationId: user?.stationId || '',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordErrors, setPasswordErrors] = useState({});
 
   const createMutation = useMutation({
     mutationFn: (data) => user ? usersAPI.update(user._id, data) : usersAPI.create(data),
@@ -347,10 +352,36 @@ function UserFormModal({ user, stations, jobTitles, departments, onClose, onSucc
     },
   });
 
+  const validatePassword = (pw) => {
+    const errors = [];
+    if (pw.length < 8) errors.push('at least 8 characters');
+    if (!/[A-Z]/.test(pw)) errors.push('an uppercase letter');
+    if (!/[a-z]/.test(pw)) errors.push('a lowercase letter');
+    if (!/[0-9]/.test(pw)) errors.push('a number');
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(pw)) errors.push('a special character');
+    return errors;
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     const data = { ...formData };
-    if (!data.password && user) delete data.password;
+
+    if (user && resetPassword) {
+      const errors = validatePassword(resetPassword);
+      if (errors.length > 0) {
+        setPasswordErrors({ new: `Password must contain ${errors.join(', ')}` });
+        return;
+      }
+      if (resetPassword !== confirmPassword) {
+        setPasswordErrors({ confirm: 'Passwords do not match' });
+        return;
+      }
+      data.password = resetPassword;
+    } else if (user) {
+      delete data.password;
+    }
+
+    setPasswordErrors({});
     createMutation.mutate(data);
   };
 
@@ -420,6 +451,62 @@ function UserFormModal({ user, stations, jobTitles, departments, onClose, onSucc
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+          )}
+
+          {user && (
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Shield className="h-4 w-4" />
+                Reset Password (leave blank to keep current)
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showResetPassword ? 'text' : 'password'}
+                    value={resetPassword}
+                    onChange={(e) => { setResetPassword(e.target.value); setPasswordErrors(prev => ({ ...prev, new: '' })); }}
+                    className={cn(
+                      "w-full rounded-lg border bg-background px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary",
+                      passwordErrors.new && "border-destructive focus:ring-destructive"
+                    )}
+                    placeholder="Enter new password"
+                  />
+                  <button type="button" onClick={() => setShowResetPassword(!showResetPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground">
+                    {showResetPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {passwordErrors.new && (
+                  <p className="mt-1 text-xs text-destructive">{passwordErrors.new}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Confirm New Password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => { setConfirmPassword(e.target.value); setPasswordErrors(prev => ({ ...prev, confirm: '' })); }}
+                    className={cn(
+                      "w-full rounded-lg border bg-background px-4 py-2 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-primary",
+                      passwordErrors.confirm && "border-destructive focus:ring-destructive"
+                    )}
+                    placeholder="Confirm new password"
+                  />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-muted text-muted-foreground">
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {passwordErrors.confirm && (
+                  <p className="mt-1 text-xs text-destructive">{passwordErrors.confirm}</p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Must contain: uppercase, lowercase, number, and special character
+              </p>
             </div>
           )}
 

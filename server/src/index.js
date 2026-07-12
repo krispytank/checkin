@@ -74,7 +74,7 @@ app.use(helmet({
       objectSrc: ["'none'"],
     },
   } : undefined,
-  crossOriginEmbedderPolicy: process.env.NODE_ENV === 'production',
+  crossOriginEmbedderPolicy: false,
 }));
 app.use(compression());
 app.use(mongoSanitize());

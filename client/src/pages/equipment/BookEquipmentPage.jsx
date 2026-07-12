@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
 import { casesAPI, equipmentAPI, bookingsAPI } from '../../lib/api.js';
 import { cn } from '../../lib/utils.js';
 import {
   Search, Plus, FileText, Monitor, Video, Presentation, Loader2, X, Check,
-  Gavel, GraduationCap, Users, Upload, UploadCloud
+  Gavel, GraduationCap, Users, ChevronDown
 } from 'lucide-react';
 import DateTimePopover from '../../components/DateTimePopover.jsx';
 
@@ -15,10 +15,14 @@ const TYPE_ICONS = {
   'Camera': Presentation,
 };
 
-const PURPOSE_TYPES = [
+const PURPOSE_OPTIONS = [
   { value: 'virtual_court', label: 'Virtual Court Session', icon: Gavel, description: 'Requires linked case file' },
   { value: 'staff_training', label: 'Staff Training', icon: GraduationCap, description: 'No case file needed' },
   { value: 'administrative_meeting', label: 'Admin Meeting / Event', icon: Users, description: 'No case file needed' },
+  { value: 'court_hearing', label: 'Court Hearing', icon: Gavel, description: 'No case file needed' },
+  { value: 'workshop', label: 'Workshop / Seminar', icon: GraduationCap, description: 'No case file needed' },
+  { value: 'committee_meeting', label: 'Committee Meeting', icon: Users, description: 'No case file needed' },
+  { value: 'other', label: 'Other (Custom)', icon: FileText, description: 'Specify your own reason' },
 ];
 
 function CaseSearchModal({ open, onClose, onSelect }) {
@@ -130,11 +134,16 @@ export default function BookEquipmentPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [purpose, setPurpose] = useState('');
+  const [customPurpose, setCustomPurpose] = useState('');
   const [requireDocument, setRequireDocument] = useState(true);
   const [pdfFile, setPdfFile] = useState(null);
   const [caseModalOpen, setCaseModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
+  const [purposeDropdownOpen, setPurposeDropdownOpen] = useState(false);
+  const purposeDropdownRef = useRef(null);
+  const [equipDropdownOpen, setEquipDropdownOpen] = useState(false);
+  const equipDropdownRef = useRef(null);
 
   const { data: equipData, isLoading: equipLoading } = useQuery({
     queryKey: ['equipment', 'available'],
@@ -146,6 +155,19 @@ export default function BookEquipmentPage() {
 
   const equipment = equipData?.data || [];
   const isCourt = purposeType === 'virtual_court';
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (purposeDropdownRef.current && !purposeDropdownRef.current.contains(e.target)) {
+        setPurposeDropdownOpen(false);
+      }
+      if (equipDropdownRef.current && !equipDropdownRef.current.contains(e.target)) {
+        setEquipDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const toggleEquipment = (eq) => {
     setSelectedEquipment(prev => {
@@ -162,15 +184,18 @@ export default function BookEquipmentPage() {
     setStartDate('');
     setEndDate('');
     setPurpose('');
+    setCustomPurpose('');
     setRequireDocument(true);
     setPdfFile(null);
     setSubmitResult(null);
+    setPurposeDropdownOpen(false);
   };
 
   const handleSubmit = async () => {
     if (isCourt && !selectedCase) return;
     if (selectedEquipment.length === 0 || !startDate || !endDate) return;
-    if (!purpose.trim()) return;
+    if (purposeType === 'other' && !customPurpose.trim()) return;
+    if (purposeType !== 'other' && !purpose.trim()) return;
 
     setSubmitting(true);
     try {
@@ -178,8 +203,8 @@ export default function BookEquipmentPage() {
         equipmentIds: selectedEquipment.map(e => e._id),
         startDate,
         endDate,
-        purpose,
-        purposeType,
+        purpose: purposeType === 'other' ? customPurpose.trim() : purpose.trim(),
+        purposeType: purposeType === 'other' ? customPurpose.trim() : purposeType,
         requireDocument,
       };
       if (isCourt && selectedCase) {
@@ -255,40 +280,129 @@ export default function BookEquipmentPage() {
       <div className="rounded-xl border bg-card p-4 shadow-sm">
         <label className="text-sm font-medium">Booking Purpose *</label>
         <p className="text-[10px] text-muted-foreground mt-0.5 mb-3">Select what you need the equipment for</p>
-        <div className="space-y-2">
-          {PURPOSE_TYPES.map(pt => {
-            const Icon = pt.icon;
-            return (
-              <button key={pt.value} onClick={() => {
-                setPurposeType(pt.value);
-                if (pt.value !== 'virtual_court') {
-                  setSelectedCase(null);
-                  setRequireDocument(false);
-                } else {
-                  setRequireDocument(true);
-                }
-              }}
-                className={cn(
-                  "w-full flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all",
-                  purposeType === pt.value
-                    ? "border-primary bg-primary/5"
-                    : "border-muted hover:border-muted-foreground/30 hover:bg-muted/50"
-                )}>
-                <div className={cn(
-                  "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
-                  purposeType === pt.value ? "bg-primary/10" : "bg-muted"
-                )}>
-                  <Icon className={cn("h-5 w-5", purposeType === pt.value ? "text-primary" : "text-muted-foreground")} />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{pt.label}</p>
-                  <p className="text-[10px] text-muted-foreground">{pt.description}</p>
-                </div>
-                {purposeType === pt.value && <Check className="h-4 w-4 text-primary shrink-0" />}
-              </button>
-            );
-          })}
+        
+        {/* Virtual Court Session Card */}
+        <button onClick={() => {
+          setPurposeType('virtual_court');
+          setRequireDocument(true);
+        }}
+          className={cn(
+            "w-full flex items-center gap-3 rounded-lg border-2 p-3 text-left transition-all mb-3",
+            purposeType === 'virtual_court'
+              ? "border-primary bg-primary/5"
+              : "border-muted hover:border-muted-foreground/30 hover:bg-muted/50"
+          )}>
+          <div className={cn(
+            "h-10 w-10 rounded-lg flex items-center justify-center shrink-0",
+            purposeType === 'virtual_court' ? "bg-primary/10" : "bg-muted"
+          )}>
+            <Gavel className={cn("h-5 w-5", purposeType === 'virtual_court' ? "text-primary" : "text-muted-foreground")} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Virtual Court Session</p>
+            <p className="text-[10px] text-muted-foreground">Requires linked case file</p>
+          </div>
+          {purposeType === 'virtual_court' && <Check className="h-4 w-4 text-primary shrink-0" />}
+        </button>
+
+        {/* Other Purpose Dropdown */}
+        <div className="relative" ref={purposeDropdownRef}>
+          <button type="button" onClick={() => setPurposeDropdownOpen(!purposeDropdownOpen)}
+            className={cn(
+              "w-full flex items-center justify-between gap-2 rounded-lg border-2 p-3 text-left transition-all",
+              purposeType !== 'virtual_court' && purposeType !== 'other'
+                ? "border-primary bg-primary/5"
+                : "border-muted hover:border-muted-foreground/30 hover:bg-muted/50"
+            )}>
+            <div className="flex items-center gap-3 min-w-0">
+              {purposeType !== 'virtual_court' && purposeType !== 'other' ? (
+                (() => {
+                  const opt = PURPOSE_OPTIONS.find(o => o.value === purposeType);
+                  const Icon = opt?.icon || FileText;
+                  return (
+                    <>
+                      <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-primary/10">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">{opt?.label || purposeType}</p>
+                        <p className="text-[10px] text-muted-foreground">{opt?.description}</p>
+                      </div>
+                    </>
+                  );
+                })()
+              ) : purposeType === 'other' ? (
+                <>
+                  <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-primary/10">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">Other (Custom)</p>
+                    <p className="text-[10px] text-muted-foreground">Specify your own reason</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-muted">
+                    <FileText className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-muted-foreground">Select a purpose...</p>
+                  </div>
+                </>
+              )}
+            </div>
+            <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", purposeDropdownOpen && "rotate-180")} />
+          </button>
+
+          {purposeDropdownOpen && (
+            <div className="absolute z-50 mt-1 w-full rounded-lg border bg-card shadow-lg max-h-60 overflow-y-auto">
+              {PURPOSE_OPTIONS.filter(o => o.value !== 'virtual_court').map(opt => {
+                const Icon = opt.icon;
+                return (
+                  <button key={opt.value} type="button" onClick={() => {
+                    setPurposeType(opt.value);
+                    setPurpose(opt.label);
+                    setPurposeDropdownOpen(false);
+                    if (opt.value !== 'virtual_court') {
+                      setSelectedCase(null);
+                      setRequireDocument(false);
+                    }
+                  }}
+                    className={cn(
+                      "w-full flex items-center gap-3 p-3 text-left hover:bg-muted transition-colors",
+                      purposeType === opt.value && "bg-primary/5"
+                    )}>
+                    <div className={cn(
+                      "h-8 w-8 rounded-lg flex items-center justify-center shrink-0",
+                      purposeType === opt.value ? "bg-primary/10" : "bg-muted"
+                    )}>
+                      <Icon className={cn("h-4 w-4", purposeType === opt.value ? "text-primary" : "text-muted-foreground")} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">{opt.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{opt.description}</p>
+                    </div>
+                    {purposeType === opt.value && <Check className="h-4 w-4 text-primary shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
+
+        {/* Custom Purpose Input - shown when 'other' is selected */}
+        {purposeType === 'other' && (
+          <div className="mt-3">
+            <input
+              type="text"
+              value={customPurpose}
+              onChange={(e) => setCustomPurpose(e.target.value)}
+              placeholder="Enter your reason for booking..."
+              className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+        )}
       </div>
 
       {/* Case Selection - only for virtual court */}
@@ -327,6 +441,42 @@ export default function BookEquipmentPage() {
           <div className="flex justify-center py-6"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
         ) : equipment.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">No equipment currently available</p>
+        ) : equipment.length > 2 ? (
+          <div className="mt-2 relative" ref={equipDropdownRef}>
+            <button type="button" onClick={() => setEquipDropdownOpen(!equipDropdownOpen)}
+              className="w-full flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2.5 text-sm text-left hover:bg-muted/50 transition-colors">
+              <span className="truncate">
+                {selectedEquipment.length === 0
+                  ? 'Select equipment...'
+                  : `${selectedEquipment.length} item${selectedEquipment.length > 1 ? 's' : ''} selected`}
+              </span>
+              <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", equipDropdownOpen && "rotate-180")} />
+            </button>
+            {equipDropdownOpen && (
+              <div className="absolute z-50 mt-1 w-full rounded-lg border bg-card shadow-lg max-h-60 overflow-y-auto">
+                {equipment.map(eq => {
+                  const Icon = TYPE_ICONS[eq.type] || Monitor;
+                  const selected = selectedEquipment.some(e => e._id === eq._id);
+                  return (
+                    <button key={eq._id} type="button" onClick={() => toggleEquipment(eq)}
+                      className={cn(
+                        "w-full flex items-center gap-3 p-3 text-left hover:bg-muted transition-colors",
+                        selected && "bg-primary/5"
+                      )}>
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted shrink-0">
+                        <Icon className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{eq.name}</p>
+                        <p className="text-[10px] text-muted-foreground">{eq.serialNumber} • {eq.type}</p>
+                      </div>
+                      {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         ) : (
           <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto">
             {equipment.map(eq => {
@@ -375,9 +525,13 @@ export default function BookEquipmentPage() {
         </div>
         <div>
           <label className="text-sm font-medium">{isCourt ? 'Notes' : 'Reason for Request'} *</label>
-          <textarea value={purpose} onChange={e => setPurpose(e.target.value)} rows={2}
-            placeholder={isCourt ? "Any additional details..." : "Describe why you need this equipment..."}
-            className="w-full mt-1 rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+          {purposeType !== 'other' ? (
+            <textarea value={purpose} onChange={e => setPurpose(e.target.value)} rows={2}
+              placeholder={isCourt ? "Any additional details..." : "Describe why you need this equipment..."}
+              className="w-full mt-1 rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none" />
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">Enter your reason in the field above</p>
+          )}
         </div>
       </div>
 
@@ -436,7 +590,7 @@ export default function BookEquipmentPage() {
 
       {/* Submit */}
       <button onClick={handleSubmit}
-        disabled={(isCourt && !selectedCase) || selectedEquipment.length === 0 || !startDate || !endDate || !purpose.trim() || submitting}
+        disabled={(isCourt && !selectedCase) || selectedEquipment.length === 0 || !startDate || !endDate || (purposeType === 'other' ? !customPurpose.trim() : !purpose.trim()) || submitting}
         className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed">
         {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
         Submit Booking

@@ -99,9 +99,8 @@ router.post('/', authenticate, authorizeModule('equipment', 'admin', 'booker'), 
   try {
     const { caseId, equipmentIds, startDate, endDate, purpose = '', purposeType = 'virtual_court', requireDocument = true } = req.body;
 
-    const validPurposeTypes = ['virtual_court', 'staff_training', 'administrative_meeting'];
-    if (!validPurposeTypes.includes(purposeType)) {
-      return res.status(400).json({ success: false, message: 'Invalid purpose type' });
+    if (!purposeType || typeof purposeType !== 'string') {
+      return res.status(400).json({ success: false, message: 'Purpose type is required' });
     }
 
     if (purposeType === 'virtual_court') {

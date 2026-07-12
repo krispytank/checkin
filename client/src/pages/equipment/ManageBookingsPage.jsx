@@ -5,7 +5,7 @@ import { cn } from '../../lib/utils.js';
 import {
   Loader2, Check, X, Truck, RotateCcw, FileText, Calendar, Clock,
   Monitor, Video, Presentation, ChevronDown, ChevronUp, PackageCheck,
-  Gavel, GraduationCap, Users
+  Gavel, GraduationCap, Users, Tag
 } from 'lucide-react';
 
 const STATUS_CONFIG = {
@@ -70,6 +70,10 @@ function BookingCard({ booking, onAction, onViewPdf, role }) {
               {purposeCfg ? (
                 <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium", purposeCfg.color)}>
                   <PurposeIcon className="h-3 w-3" /> {purposeCfg.label}
+                </span>
+              ) : booking.purposeType ? (
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300">
+                  <Tag className="h-3 w-3" /> {booking.purposeType}
                 </span>
               ) : (
                 <p className="text-sm font-semibold">{caseInfo.caseNumber || 'N/A'}</p>
