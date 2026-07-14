@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'wouter';
+import * as Popover from '@radix-ui/react-popover';
 import { casesAPI, equipmentAPI, bookingsAPI } from '../../lib/api.js';
 import { cn } from '../../lib/utils.js';
 import {
@@ -141,9 +142,7 @@ export default function BookEquipmentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
   const [purposeDropdownOpen, setPurposeDropdownOpen] = useState(false);
-  const purposeDropdownRef = useRef(null);
   const [equipDropdownOpen, setEquipDropdownOpen] = useState(false);
-  const equipDropdownRef = useRef(null);
 
   const { data: equipData, isLoading: equipLoading } = useQuery({
     queryKey: ['equipment', 'available'],
@@ -155,19 +154,6 @@ export default function BookEquipmentPage() {
 
   const equipment = equipData?.data || [];
   const isCourt = purposeType === 'virtual_court';
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (purposeDropdownRef.current && !purposeDropdownRef.current.contains(e.target)) {
-        setPurposeDropdownOpen(false);
-      }
-      if (equipDropdownRef.current && !equipDropdownRef.current.contains(e.target)) {
-        setEquipDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const toggleEquipment = (eq) => {
     setSelectedEquipment(prev => {
@@ -306,57 +292,64 @@ export default function BookEquipmentPage() {
         </button>
 
         {/* Other Purpose Dropdown */}
-        <div className="relative" ref={purposeDropdownRef}>
-          <button type="button" onClick={() => setPurposeDropdownOpen(!purposeDropdownOpen)}
-            className={cn(
-              "w-full flex items-center justify-between gap-2 rounded-lg border-2 p-3 text-left transition-all",
-              purposeType !== 'virtual_court' && purposeType !== 'other'
-                ? "border-primary bg-primary/5"
-                : "border-muted hover:border-muted-foreground/30 hover:bg-muted/50"
-            )}>
-            <div className="flex items-center gap-3 min-w-0">
-              {purposeType !== 'virtual_court' && purposeType !== 'other' ? (
-                (() => {
-                  const opt = PURPOSE_OPTIONS.find(o => o.value === purposeType);
-                  const Icon = opt?.icon || FileText;
-                  return (
-                    <>
-                      <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-primary/10">
-                        <Icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium">{opt?.label || purposeType}</p>
-                        <p className="text-[10px] text-muted-foreground">{opt?.description}</p>
-                      </div>
-                    </>
-                  );
-                })()
-              ) : purposeType === 'other' ? (
-                <>
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-primary/10">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">Other (Custom)</p>
-                    <p className="text-[10px] text-muted-foreground">Specify your own reason</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-muted">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-muted-foreground">Select a purpose...</p>
-                  </div>
-                </>
-              )}
-            </div>
-            <ChevronDown className={cn("h-4 w-4 text-muted-foreground shrink-0 transition-transform", purposeDropdownOpen && "rotate-180")} />
-          </button>
+        <Popover.Root open={purposeDropdownOpen} onOpenChange={setPurposeDropdownOpen}>
+          <Popover.Trigger asChild>
+            <button type="button"
+              className={cn(
+                "w-full flex items-center justify-between gap-2 rounded-lg border-2 p-3 text-left transition-all",
+                purposeType !== 'virtual_court' && purposeType !== 'other'
+                  ? "border-primary bg-primary/5"
+                  : "border-muted hover:border-muted-foreground/30 hover:bg-muted/50"
+              )}>
+              <div className="flex items-center gap-3 min-w-0">
+                {purposeType !== 'virtual_court' && purposeType !== 'other' ? (
+                  (() => {
+                    const opt = PURPOSE_OPTIONS.find(o => o.value === purposeType);
+                    const Icon = opt?.icon || FileText;
+                    return (
+                      <>
+                        <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-primary/10">
+                          <Icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium">{opt?.label || purposeType}</p>
+                          <p className="text-[10px] text-muted-foreground">{opt?.description}</p>
+                        </div>
+                      </>
+                    );
+                  })()
+                ) : purposeType === 'other' ? (
+                  <>
+                    <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-primary/10">
+                      <FileText className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">Other (Custom)</p>
+                      <p className="text-[10px] text-muted-foreground">Specify your own reason</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-muted">
+                      <FileText className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-muted-foreground">Select a purpose...</p>
+                    </div>
+                  </>
+                )}
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+            </button>
+          </Popover.Trigger>
 
-          {purposeDropdownOpen && (
-            <div className="absolute z-50 mt-1 w-full rounded-lg border bg-card shadow-lg max-h-60 overflow-y-auto">
+          <Popover.Portal>
+            <Popover.Content
+              side="bottom"
+              align="end"
+              sideOffset={8}
+              className="z-50 min-w-[var(--radix-popover-trigger-width)] rounded-xl border border-border/50 bg-card p-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+            >
               {PURPOSE_OPTIONS.filter(o => o.value !== 'virtual_court').map(opt => {
                 const Icon = opt.icon;
                 return (
@@ -370,7 +363,8 @@ export default function BookEquipmentPage() {
                     }
                   }}
                     className={cn(
-                      "w-full flex items-center gap-3 p-3 text-left hover:bg-muted transition-colors",
+                      "w-full flex items-center gap-3 p-3 text-left rounded-lg transition-colors",
+                      "hover:bg-accent focus:bg-accent focus:outline-none",
                       purposeType === opt.value && "bg-primary/5"
                     )}>
                     <div className={cn(
@@ -387,9 +381,9 @@ export default function BookEquipmentPage() {
                   </button>
                 );
               })}
-            </div>
-          )}
-        </div>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
 
         {/* Custom Purpose Input - shown when 'other' is selected */}
         {purposeType === 'other' && (
@@ -442,40 +436,51 @@ export default function BookEquipmentPage() {
         ) : equipment.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">No equipment currently available</p>
         ) : equipment.length > 2 ? (
-          <div className="mt-2 relative" ref={equipDropdownRef}>
-            <button type="button" onClick={() => setEquipDropdownOpen(!equipDropdownOpen)}
-              className="w-full flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2.5 text-sm text-left hover:bg-muted/50 transition-colors">
-              <span className="truncate">
-                {selectedEquipment.length === 0
-                  ? 'Select equipment...'
-                  : `${selectedEquipment.length} item${selectedEquipment.length > 1 ? 's' : ''} selected`}
-              </span>
-              <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", equipDropdownOpen && "rotate-180")} />
-            </button>
-            {equipDropdownOpen && (
-              <div className="absolute z-50 mt-1 w-full rounded-lg border bg-card shadow-lg max-h-60 overflow-y-auto">
-                {equipment.map(eq => {
-                  const Icon = TYPE_ICONS[eq.type] || Monitor;
-                  const selected = selectedEquipment.some(e => e._id === eq._id);
-                  return (
-                    <button key={eq._id} type="button" onClick={() => toggleEquipment(eq)}
-                      className={cn(
-                        "w-full flex items-center gap-3 p-3 text-left hover:bg-muted transition-colors",
-                        selected && "bg-primary/5"
-                      )}>
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted shrink-0">
-                        <Icon className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{eq.name}</p>
-                        <p className="text-[10px] text-muted-foreground">{eq.serialNumber} • {eq.type}</p>
-                      </div>
-                      {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+          <div className="mt-2">
+            <Popover.Root open={equipDropdownOpen} onOpenChange={setEquipDropdownOpen}>
+              <Popover.Trigger asChild>
+                <button type="button"
+                  className="w-full flex items-center justify-between gap-2 rounded-lg border bg-background px-3 py-2.5 text-sm text-left hover:bg-muted/50 transition-colors">
+                  <span className="truncate">
+                    {selectedEquipment.length === 0
+                      ? 'Select equipment...'
+                      : `${selectedEquipment.length} item${selectedEquipment.length > 1 ? 's' : ''} selected`}
+                  </span>
+                  <ChevronDown className="h-4 w-4 shrink-0" />
+                </button>
+              </Popover.Trigger>
+
+              <Popover.Portal>
+                <Popover.Content
+                  side="bottom"
+                  align="end"
+                  sideOffset={8}
+                  className="z-50 min-w-[var(--radix-popover-trigger-width)] rounded-xl border border-border/50 bg-card p-1.5 shadow-xl max-h-60 overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+                >
+                  {equipment.map(eq => {
+                    const Icon = TYPE_ICONS[eq.type] || Monitor;
+                    const selected = selectedEquipment.some(e => e._id === eq._id);
+                    return (
+                      <button key={eq._id} type="button" onClick={() => toggleEquipment(eq)}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-3 text-left rounded-lg transition-colors",
+                          "hover:bg-accent focus:bg-accent focus:outline-none",
+                          selected && "bg-primary/5"
+                        )}>
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted shrink-0">
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{eq.name}</p>
+                          <p className="text-[10px] text-muted-foreground">{eq.serialNumber} • {eq.type}</p>
+                        </div>
+                        {selected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                      </button>
+                    );
+                  })}
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
           </div>
         ) : (
           <div className="mt-2 space-y-1.5 max-h-48 overflow-y-auto">

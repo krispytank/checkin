@@ -12,13 +12,7 @@ const DEFAULT_PREFS = {
   shiftReminder: true,
   shiftChange: true,
   shiftAssignment: true,
-  // File movement notifications
-  fileApproved: true,
-  fileReleased: true,
-  fileDueToday: true,
-  fileOverdue: true,
   approvalRequired: true,
-  fileReturned: true,
   // Fleet notifications
   tripApproved: true,
   maintenanceDue: true,
@@ -83,7 +77,7 @@ router.put('/preferences', authenticate, async (req, res, next) => {
     const db = getDB();
     const {
       lateCheckIn, lateCheckOut, overtime, shiftReminder, shiftChange, shiftAssignment,
-      fileApproved, fileReleased, fileDueToday, fileOverdue, approvalRequired, fileReturned,
+      approvalRequired,
       tripApproved, maintenanceDue, insuranceExpiring, inspectionExpiring,
       muteUntil,
     } = req.body;
@@ -95,12 +89,7 @@ router.put('/preferences', authenticate, async (req, res, next) => {
     if (shiftReminder !== undefined) updateData.shiftReminder = !!shiftReminder;
     if (shiftChange !== undefined) updateData.shiftChange = !!shiftChange;
     if (shiftAssignment !== undefined) updateData.shiftAssignment = !!shiftAssignment;
-    if (fileApproved !== undefined) updateData.fileApproved = !!fileApproved;
-    if (fileReleased !== undefined) updateData.fileReleased = !!fileReleased;
-    if (fileDueToday !== undefined) updateData.fileDueToday = !!fileDueToday;
-    if (fileOverdue !== undefined) updateData.fileOverdue = !!fileOverdue;
     if (approvalRequired !== undefined) updateData.approvalRequired = !!approvalRequired;
-    if (fileReturned !== undefined) updateData.fileReturned = !!fileReturned;
     if (tripApproved !== undefined) updateData.tripApproved = !!tripApproved;
     if (maintenanceDue !== undefined) updateData.maintenanceDue = !!maintenanceDue;
     if (insuranceExpiring !== undefined) updateData.insuranceExpiring = !!insuranceExpiring;

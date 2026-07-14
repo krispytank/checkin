@@ -1,14 +1,15 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import * as Popover from '@radix-ui/react-popover';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { messagesAPI } from '../lib/api.js';
 import {
   User, Settings, LogOut, Menu,
   Home, Clock, FileText, MessageSquare,
-  Users, MapPin, Calendar, Package, Car, FolderOpen,
+  Users, MapPin, Calendar, Package, Car,
 } from 'lucide-react';
-import { cn } from '../lib/utils.js';
+import { cn, filterMessagesForPopup, markMessageRead, cleanupReadTimes } from '../lib/utils.js';
 import Sidebar from '../components/Sidebar.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 
@@ -18,8 +19,7 @@ const mobileNavItems = [
   { name: 'Home', href: '/', icon: Home },
   { name: 'Attend', href: '/attendance/dashboard', icon: Clock },
   { name: 'Fleet', href: '/fleet/dashboard', icon: Car },
-  { name: 'Files', href: '/file-movement/dashboard', icon: FolderOpen },
-  { name: 'More', href: '__more__', icon: Settings },
+  { name: 'Book', href: '/equipment/book', icon: Package },
 ];
 
 export default function MainLayout({ children }) {
@@ -32,9 +32,7 @@ export default function MainLayout({ children }) {
     }
   });
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
-  const messagesRef = useRef(null);
   const [location] = useLocation();
   const { logout, hasRole, hasModuleRole } = useAuth();
 
@@ -50,16 +48,6 @@ export default function MainLayout({ children }) {
 
   const handleMobileOpen = useCallback(() => setMobileOpen(true), []);
   const handleMobileClose = useCallback(() => setMobileOpen(false), []);
-
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (messagesRef.current && !messagesRef.current.contains(e.target)) {
-        setMessagesOpen(false);
-      }
-    };
-    if (messagesOpen) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [messagesOpen]);
 
   const handleLogout = async () => {
     await logout();
@@ -119,23 +107,29 @@ export default function MainLayout({ children }) {
 
           <div className="flex items-center gap-1.5 sm:gap-2">
             {/* Messages */}
-            <div className="relative" ref={messagesRef}>
-              <button
-                onClick={() => setMessagesOpen(!messagesOpen)}
-                className="relative p-2 rounded-lg hover:bg-muted"
-              >
-                <MessageSquare className="h-4 w-4 lg:h-5 lg:w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </button>
+            <Popover.Root open={messagesOpen} onOpenChange={setMessagesOpen}>
+              <Popover.Trigger asChild>
+                <button className="relative p-2 rounded-lg hover:bg-muted">
+                  <MessageSquare className="h-4 w-4 lg:h-5 lg:w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[9px] font-bold text-destructive-foreground">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+              </Popover.Trigger>
 
-              {messagesOpen && (
-                <MessagesDropdown onClose={() => setMessagesOpen(false)} />
-              )}
-            </div>
+              <Popover.Portal>
+                <Popover.Content
+                  side="bottom"
+                  align="end"
+                  sideOffset={8}
+                  className="z-50 min-w-[var(--radix-popover-trigger-width)] w-80 rounded-xl border border-border/50 bg-card shadow-xl animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 overflow-hidden"
+                >
+                  <MessagesDropdown onClose={() => setMessagesOpen(false)} />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
 
             <Link href="/profile" className="p-2 rounded-lg hover:bg-muted">
               <User className="h-4 w-4 lg:h-5 lg:w-5" />
@@ -161,40 +155,7 @@ export default function MainLayout({ children }) {
         <div className="flex items-center justify-around h-16 px-2">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
-            const isMore = item.href === '__more__';
-            const isActive = !isMore && location === item.href;
-
-            if (isMore) {
-              return (
-                <div key="more" className="relative">
-                  <button
-                    onClick={() => setMoreMenuOpen(!moreMenuOpen)}
-                    className={cn(
-                      "flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-colors min-w-[56px]",
-                      moreMenuOpen ? "text-primary" : "text-muted-foreground"
-                    )}
-                  >
-                    <Icon className="h-5 w-5" />
-                    <span className="text-[10px] font-medium">More</span>
-                  </button>
-
-                  {moreMenuOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setMoreMenuOpen(false)} />
-                      <div className="absolute bottom-full right-0 mb-2 w-60 rounded-xl border bg-card shadow-xl z-50 py-2 overflow-y-auto max-h-[70vh]">
-                        <MoreMenuContent
-                          location={location}
-                          hasRole={hasRole}
-                          hasModuleRole={hasModuleRole}
-                          onClose={() => setMoreMenuOpen(false)}
-                          onLogout={handleLogout}
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            }
+            const isActive = location === item.href;
 
             return (
               <Link
@@ -221,26 +182,39 @@ export default function MainLayout({ children }) {
 
 function MessagesDropdown({ onClose }) {
   const [tab, setTab] = useState('inbox');
+  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ['messages', 'dropdown', tab],
     queryFn: async () => {
-      const res = await messagesAPI.list({ folder: tab, limit: 8 });
+      cleanupReadTimes();
+      const res = await messagesAPI.list({ folder: tab, limit: 15 });
       return res.data;
     },
   });
 
-  const messages = data?.data || [];
+  const allMessages = data?.data || [];
+  const messages = tab === 'inbox' ? filterMessagesForPopup(allMessages) : allMessages;
+
+  const handleMessageClick = (msg) => {
+    if (!msg.read) {
+      markMessageRead(msg._id);
+      messagesAPI.markRead(msg._id).then(() => {
+        queryClient.invalidateQueries(['messages', 'unread-count']);
+      });
+    }
+    onClose();
+  };
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-80 rounded-xl border bg-card shadow-xl z-50 overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b">
+    <div className="overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border/50">
         <h3 className="font-semibold text-sm">Messages</h3>
         <Link href="/attendance/messages" onClick={onClose}
           className="text-xs text-primary hover:underline">
           View All
         </Link>
       </div>
-      <div className="flex border-b">
+      <div className="flex border-b border-border/50">
         {['inbox', 'sent'].map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={cn(
@@ -258,9 +232,10 @@ function MessagesDropdown({ onClose }) {
           <div className="py-6 text-center text-xs text-muted-foreground">No messages</div>
         ) : (
           messages.map(msg => (
-            <Link key={msg._id} href={msg.link || '/attendance/messages'} onClick={onClose}
+            <Link key={msg._id} href={msg.link || '/attendance/messages'}
+              onClick={(e) => { e.preventDefault(); handleMessageClick(msg); onClose(); }}
               className={cn(
-                'block px-4 py-2.5 hover:bg-muted/50 transition-colors border-b last:border-0',
+                'block px-4 py-2.5 hover:bg-muted/50 transition-colors border-b border-border/50 last:border-0',
                 !msg.read && 'bg-primary/5'
               )}>
               <div className="flex items-start gap-2">
@@ -312,13 +287,6 @@ function MoreMenuContent({ location, hasRole, hasModuleRole, onClose, onLogout }
     { name: 'Check In/Out', href: '/fleet/checkin', icon: FileText },
     { name: 'Reports', href: '/fleet/reports', icon: FileText, roles: ['admin', 'supervisor', 'manager'] },
   ], 'fleet');
-
-  const fileMovementItems = filterByRole([
-    { name: 'Dashboard', href: '/file-movement/dashboard', icon: Clock },
-    { name: 'Case Files', href: '/file-movement/case-files', icon: FolderOpen },
-    { name: 'File Requests', href: '/file-movement/requests', icon: FileText },
-    { name: 'Strong Room', href: '/file-movement/strong-room', icon: FolderOpen, roles: ['admin', 'supervisor'] },
-  ], 'fileMovement');
 
   return (
     <>
@@ -383,33 +351,6 @@ function MoreMenuContent({ location, hasRole, hasModuleRole, onClose, onLogout }
             Fleet Management
           </div>
           {fleetItems.map((item) => {
-            const NavIcon = item.icon;
-            const active = location === item.href;
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 text-sm font-medium transition-colors",
-                  active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"
-                )}
-                onClick={onClose}
-              >
-                <NavIcon className="h-4 w-4" />
-                {item.name}
-              </Link>
-            );
-          })}
-        </div>
-      )}
-
-      {/* File Movement */}
-      {fileMovementItems.length > 0 && (
-        <div className="border-t mt-1 pt-1">
-          <div className="px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            File Movement
-          </div>
-          {fileMovementItems.map((item) => {
             const NavIcon = item.icon;
             const active = location === item.href;
             return (

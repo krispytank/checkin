@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../lib/api.js';
 import { Shield, Search, Loader2, ChevronLeft, ChevronRight, Filter, X } from 'lucide-react';
 
-const MODULES = ['attendance', 'equipment', 'fleet', 'fileMovement', 'registries', 'visitorParking', 'parkingLots', 'maintenance', 'notifications'];
+const MODULES = ['attendance', 'equipment', 'fleet', 'registries', 'visitorParking', 'parkingLots', 'maintenance', 'notifications'];
 const ACTIONS = ['created', 'updated', 'deleted', 'approved', 'rejected', 'issued', 'returned', 'released', 'moved', 'dispatched', 'in-use', 'received', 'scheduled', 'completed', 'cancelled'];
 
 export default function AdminAuditLogsPage() {

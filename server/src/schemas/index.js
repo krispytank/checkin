@@ -3,10 +3,6 @@ import records from './records.js';
 import messages from './messages.js';
 import stations from './stations.js';
 import registries from './registries.js';
-import caseFiles from './caseFiles.js';
-import fileMovements from './fileMovements.js';
-import fileRequests from './fileRequests.js';
-import strongRoomRecords from './strongRoomRecords.js';
 import shifts from './shifts.js';
 import shiftAssignments from './shiftAssignments.js';
 import departments from './departments.js';
@@ -32,10 +28,6 @@ export default [
   messages,
   stations,
   registries,
-  caseFiles,
-  fileMovements,
-  fileRequests,
-  strongRoomRecords,
   shifts,
   shiftAssignments,
   departments,

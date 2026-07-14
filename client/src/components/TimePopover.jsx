@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import * as Popover from '@radix-ui/react-popover';
 import { Clock, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../lib/utils.js';
@@ -100,7 +100,7 @@ export default function TimePopover({ value, onChange, label = 'Select time', al
           side="bottom"
           align={align}
           sideOffset={8}
-          className="z-50 w-[280px] rounded-2xl border border-border/50 bg-card p-4 shadow-xl animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          className="z-50 min-w-[var(--radix-popover-trigger-width)] rounded-2xl border border-border/50 bg-card p-4 shadow-xl animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
         >
           {/* Time spinner */}
           <div className="flex justify-center py-4">

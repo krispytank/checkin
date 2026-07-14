@@ -3,10 +3,10 @@ export default {
   validator: {
     $jsonSchema: {
       bsonType: 'object',
-      required: ['bookingId', 'caseId', 'equipmentIds', 'userId', 'startDate', 'endDate', 'status'],
+      required: ['bookingId', 'equipmentIds', 'userId', 'startDate', 'endDate', 'status'],
       properties: {
         bookingId: { bsonType: 'string', description: 'Booking ID is required' },
-        caseId: { bsonType: 'string', description: 'Case ID is required' },
+        caseId: { description: 'Case ID (optional for non-court bookings)' },
         equipmentIds: { bsonType: 'array', description: 'At least one equipment item is required' },
         userId: { bsonType: 'string', description: 'User ID is required' },
         startDate: { bsonType: 'date', description: 'Start date is required' },

@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'wouter';
 import { messagesAPI, usersAPI } from '../../lib/api.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
-import { formatDateTime, cn } from '../../lib/utils.js';
+import { formatDateTime, cn, markMessageRead } from '../../lib/utils.js';
 import { 
   Mail, Send, Inbox, Trash2, EyeOff, Loader2, 
   AlertCircle, Bell, MessageSquare, Plus, X, Settings, ExternalLink 
@@ -48,6 +48,7 @@ export default function MessagesPage() {
   const markAllReadMutation = useMutation({
     mutationFn: () => messagesAPI.markAllRead(),
     onSuccess: () => {
+      messages.filter(m => !m.read).forEach(m => markMessageRead(m._id));
       queryClient.invalidateQueries(['messages']);
     },
   });
@@ -79,6 +80,7 @@ export default function MessagesPage() {
   const handleSelectMessage = (message) => {
     setSelectedMessage(message);
     if (!message.read && message.receiverId === user._id) {
+      markMessageRead(message._id);
       markReadMutation.mutate(message._id);
     }
   };

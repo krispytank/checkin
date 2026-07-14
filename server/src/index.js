@@ -32,10 +32,8 @@ import registryRoutes from './routes/registries.js';
 import parkingLotRoutes from './routes/parkingLots.js';
 import visitorParkingRoutes from './routes/visitorParking.js';
 import maintenanceRoutes from './routes/maintenance.js';
-import fileMovementRoutes from './routes/fileMovement.js';
 import fleetDashboardRoutes from './routes/fleetDashboard.js';
 import fleetReportRoutes from './routes/fleetReports.js';
-import fileReportRoutes from './routes/fileReports.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -128,10 +126,8 @@ app.use('/api/registries', registryRoutes);
 app.use('/api/parking-lots', parkingLotRoutes);
 app.use('/api/visitor-parking', visitorParkingRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
-app.use('/api/file-movement', fileMovementRoutes);
 app.use('/api/fleet/dashboard', fleetDashboardRoutes);
 app.use('/api/fleet/reports', fleetReportRoutes);
-app.use('/api/file-reports', fileReportRoutes);
 
 // Serve uploaded files (1 hour cache)
 app.use('/uploads', express.static(join(__dirname, '../uploads'), { maxAge: '1h' }));

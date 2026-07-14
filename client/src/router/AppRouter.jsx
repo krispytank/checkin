@@ -45,13 +45,6 @@ const VisitorGatePage = lazy(() => import('../pages/fleet/VisitorGatePage.jsx'))
 const FleetReportsPage = lazy(() => import('../pages/fleet/FleetReportsPage.jsx'));
 const ParkingReportsPage = lazy(() => import('../pages/fleet/ParkingReportsPage.jsx'));
 
-// File movement module
-const FileMovementDashboardPage = lazy(() => import('../pages/fileMovement/FileMovementDashboardPage.jsx'));
-const CaseFilesPage = lazy(() => import('../pages/fileMovement/CaseFilesPage.jsx'));
-const FileRequestsPage = lazy(() => import('../pages/fileMovement/FileRequestsPage.jsx'));
-const StrongRoomPage = lazy(() => import('../pages/fileMovement/StrongRoomPage.jsx'));
-const FileReportsPage = lazy(() => import('../pages/fileMovement/FileReportsPage.jsx'));
-
 // Admin pages
 const AdminUsersPage = lazy(() => import('../pages/admin/AdminUsersPage.jsx'));
 const AdminStationsPage = lazy(() => import('../pages/admin/AdminStationsPage.jsx'));
@@ -327,54 +320,10 @@ export default function AppRouter() {
             </MainLayout>
           </ProtectedRoute>
         </Route>
-        <Route path="/admin/file-movement/registries">
-          <ProtectedRoute requiredRoles={['admin']}>
-            <MainLayout>
-              <AdminRegistriesPage />
-            </MainLayout>
-          </ProtectedRoute>
-        </Route>
         <Route path="/admin/audit-logs">
           <ProtectedRoute requiredRoles={['admin']}>
             <MainLayout>
               <AdminAuditLogsPage />
-            </MainLayout>
-          </ProtectedRoute>
-        </Route>
-
-        {/* File Movement Module Routes */}
-        <Route path="/file-movement/dashboard">
-          <ProtectedRoute>
-            <MainLayout module="fileMovement">
-              <FileMovementDashboardPage />
-            </MainLayout>
-          </ProtectedRoute>
-        </Route>
-        <Route path="/file-movement/case-files">
-          <ProtectedRoute>
-            <MainLayout module="fileMovement">
-              <CaseFilesPage />
-            </MainLayout>
-          </ProtectedRoute>
-        </Route>
-        <Route path="/file-movement/requests">
-          <ProtectedRoute>
-            <MainLayout module="fileMovement">
-              <FileRequestsPage />
-            </MainLayout>
-          </ProtectedRoute>
-        </Route>
-        <Route path="/file-movement/strong-room">
-          <ProtectedRoute>
-            <MainLayout module="fileMovement">
-              <StrongRoomPage />
-            </MainLayout>
-          </ProtectedRoute>
-        </Route>
-        <Route path="/file-movement/reports">
-          <ProtectedRoute>
-            <MainLayout module="fileMovement">
-              <FileReportsPage />
             </MainLayout>
           </ProtectedRoute>
         </Route>

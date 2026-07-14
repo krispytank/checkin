@@ -243,29 +243,4 @@ export const maintenanceAPI = {
   delete: (id) => api.delete(`/maintenance/${id}`),
 };
 
-export const fileMovementAPI = {
-  // Case Files
-  listCaseFiles: (params) => api.get('/file-movement/case-files', { params }),
-  getCaseFile: (id) => api.get(`/file-movement/case-files/${id}`),
-  createCaseFile: (data) => api.post('/file-movement/case-files', data),
-  updateCaseFile: (id, data) => api.put(`/file-movement/case-files/${id}`, data),
-  deleteCaseFile: (id) => api.delete(`/file-movement/case-files/${id}`),
-  // Movements
-  listMovements: (params) => api.get('/file-movement/movements', { params }),
-  createMovement: (data) => api.post('/file-movement/movements', data),
-  returnFile: (movementId, data) => api.put(`/file-movement/movements/${movementId}/return`, data),
-  // Requests
-  listRequests: (params) => api.get('/file-movement/requests', { params }),
-  createRequest: (data) => api.post('/file-movement/requests', data),
-  approveRequest: (id, data) => api.put(`/file-movement/requests/${id}/approve`, data),
-  // Strong Room
-  listStrongRoom: (params) => api.get('/file-movement/strong-room', { params }),
-  releaseFromStrongRoom: (data) => api.post('/file-movement/strong-room/release', data),
-  returnToStrongRoom: (id, data) => api.put(`/file-movement/strong-room/${id}/return`, data),
-  // Tracking
-  trackFile: (caseFileId) => api.get(`/file-movement/tracking/${caseFileId}`),
-  // Dashboard
-  getDashboard: (params) => api.get('/file-movement/dashboard', { params }),
-};
-
 export default api;

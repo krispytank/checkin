@@ -140,7 +140,7 @@ export default function DateTimePopover({ value, onChange, label = 'Select date 
           side="bottom"
           align={align}
           sideOffset={8}
-          className="z-50 w-[320px] rounded-2xl border border-border/50 bg-card p-4 shadow-xl animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+          className="z-50 min-w-[var(--radix-popover-trigger-width)] rounded-2xl border border-border/50 bg-card p-4 shadow-xl animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
         >
           {/* Tab switcher */}
           <div className="flex gap-1 mb-4 p-1 rounded-xl bg-muted/50">

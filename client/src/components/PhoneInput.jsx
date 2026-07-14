@@ -1,5 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
+import * as Popover from '@radix-ui/react-popover';
 import { ChevronDown, Check } from 'lucide-react';
+import { cn } from '../lib/utils.js';
 
 const EA_COUNTRIES = [
   { code: 'KE', name: 'Kenya', dial: '+254', maxDigits: 9 },
@@ -14,9 +16,7 @@ const EA_COUNTRIES = [
 export default function PhoneInput({ value, onChange, placeholder = '712 345 678', className = '' }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const dropdownRef = useRef(null);
 
-  // Parse stored value: "+254712345678" -> { dial: "+254", local: "712345678" }
   const parseValue = (val) => {
     if (!val) return { dial: '+254', local: '' };
     const country = EA_COUNTRIES.find(c => val.startsWith(c.dial));
@@ -36,14 +36,12 @@ export default function PhoneInput({ value, onChange, placeholder = '712 345 678
   );
 
   const handleLocalChange = (e) => {
-    // Strip non-digits and leading zeros
     let raw = e.target.value.replace(/\D/g, '').replace(/^0+/, '');
     if (raw.length > maxLen) raw = raw.slice(0, maxLen);
     onChange(`${dial}${raw}`);
   };
 
   const handleCountrySelect = (country) => {
-    // Re-format existing local number for new country's max length
     let raw = local.replace(/\D/g, '').replace(/^0+/, '');
     if (raw.length > country.maxDigits) raw = raw.slice(0, country.maxDigits);
     onChange(`${country.dial}${raw}`);
@@ -54,57 +52,69 @@ export default function PhoneInput({ value, onChange, placeholder = '712 345 678
   return (
     <div className={`relative flex ${className}`}>
       {/* Country selector */}
-      <div className="relative" ref={dropdownRef}>
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          className="flex items-center gap-1 rounded-l-lg border border-r-0 bg-muted/50 px-2 py-2 text-sm hover:bg-muted transition-colors"
-        >
-          <span className="text-xs font-medium">{selectedCountry.code}</span>
-          <span className="text-xs text-muted-foreground">{selectedCountry.dial}</span>
-          <ChevronDown className="h-3 w-3 text-muted-foreground" />
-        </button>
+      <Popover.Root open={open} onOpenChange={(o) => { setOpen(o); if (!o) setSearch(''); }}>
+        <Popover.Trigger asChild>
+          <button
+            type="button"
+            className={cn(
+              'flex items-center gap-1 rounded-l-lg border border-r-0 bg-muted/50 px-2 py-2 text-sm',
+              'hover:bg-muted transition-colors',
+              'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1'
+            )}
+          >
+            <span className="text-xs font-medium">{selectedCountry.code}</span>
+            <span className="text-xs text-muted-foreground">{selectedCountry.dial}</span>
+            <ChevronDown className="h-3 w-3 text-muted-foreground" />
+          </button>
+        </Popover.Trigger>
 
-        {open && (
-          <>
-            <div className="fixed inset-0 z-40" onClick={() => { setOpen(false); setSearch(''); }} />
-            <div className="absolute z-50 top-full left-0 mt-1 w-56 rounded-lg border bg-card shadow-xl">
-              <div className="p-2 border-b">
-                <input
-                  type="text"
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Search country..."
-                  className="w-full rounded-md border bg-background px-2 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-                  autoFocus
-                />
-              </div>
-              <div className="max-h-48 overflow-y-auto p-1">
-                {filteredCountries.map(country => (
-                  <button
-                    key={country.code}
-                    type="button"
-                    onClick={() => handleCountrySelect(country)}
-                    className="w-full flex items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-muted transition-colors"
-                  >
-                    <span className="flex items-center gap-2">
-                      <span className="font-medium text-xs">{country.code}</span>
-                      <span>{country.name}</span>
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <span className="text-xs text-muted-foreground">{country.dial}</span>
-                      {country.code === selectedCountry.code && <Check className="h-3 w-3 text-primary" />}
-                    </span>
-                  </button>
-                ))}
-                {filteredCountries.length === 0 && (
-                  <p className="px-2 py-3 text-xs text-muted-foreground text-center">No countries found</p>
-                )}
-              </div>
+        <Popover.Portal>
+          <Popover.Content
+            side="bottom"
+            align="start"
+            sideOffset={8}
+            className="z-50 w-56 rounded-xl border border-border/50 bg-card p-1.5 shadow-xl animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+          >
+            <div className="p-2 border-b border-border/50">
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search country..."
+                className="w-full rounded-lg border bg-background px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+                autoFocus
+              />
             </div>
-          </>
-        )}
-      </div>
+            <div className="max-h-48 overflow-y-auto p-1">
+              {filteredCountries.map(country => (
+                <button
+                  key={country.code}
+                  type="button"
+                  onClick={() => handleCountrySelect(country)}
+                  className={cn(
+                    'w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm transition-colors',
+                    'hover:bg-accent focus:bg-accent focus:outline-none',
+                    country.code === selectedCountry.code && 'bg-primary/10'
+                  )}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="font-medium text-xs">{country.code}</span>
+                    <span>{country.name}</span>
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-xs text-muted-foreground">{country.dial}</span>
+                    {country.code === selectedCountry.code && <Check className="h-3 w-3 text-primary" />}
+                  </span>
+                </button>
+              ))}
+              {filteredCountries.length === 0 && (
+                <p className="px-3 py-3 text-xs text-muted-foreground text-center">No countries found</p>
+              )}
+            </div>
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
 
       {/* Phone number input */}
       <div className="relative flex-1">

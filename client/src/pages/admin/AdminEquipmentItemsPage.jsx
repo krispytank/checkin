@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Popover from '@radix-ui/react-popover';
 import { equipmentAPI } from '../../lib/api.js';
 import { Plus, Search, Loader2, Package, X, Edit2, Trash2, Upload } from 'lucide-react';
 import CsvImportModal from '../../components/CsvImportModal.jsx';
@@ -51,34 +52,43 @@ function EquipmentForm({ item, types, onSubmit, onCancel, isSubmitting }) {
             required
           />
         </div>
-        <div className="relative">
+        <div>
           <label className="block text-sm font-medium mb-1">Type *</label>
-          <input
-            type="text"
-            value={typeInput}
-            onChange={e => { setTypeInput(e.target.value); setTypeOpen(true); }}
-            onFocus={() => setTypeOpen(true)}
-            onBlur={() => setTimeout(() => setTypeOpen(false), 200)}
-            placeholder="e.g. Screen, Projector..."
-            className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
-            required
-          />
-          {typeOpen && typeInput.trim() && (
-            <div className="absolute z-10 mt-1 w-full rounded-lg border bg-card shadow-lg max-h-40 overflow-y-auto">
-              {filteredTypes.map(t => (
-                <button key={t} type="button" onClick={() => handleTypeSelect(t)}
-                  className="w-full text-left px-3 py-2 text-sm hover:bg-muted transition-colors">
-                  {t}
-                </button>
-              ))}
-              {!exactMatch && (
-                <button type="button" onClick={() => handleTypeSelect(typeInput.trim())}
-                  className="w-full text-left px-3 py-2 text-sm text-primary font-medium hover:bg-primary/5 border-t transition-colors">
-                  <Plus className="inline h-3 w-3 mr-1" /> Create "{typeInput.trim()}"
-                </button>
-              )}
-            </div>
-          )}
+          <Popover.Root open={typeOpen && typeInput.trim()} onOpenChange={setTypeOpen}>
+            <Popover.Trigger asChild>
+              <input
+                type="text"
+                value={typeInput}
+                onChange={e => { setTypeInput(e.target.value); setTypeOpen(true); }}
+                onFocus={() => setTypeOpen(true)}
+                placeholder="e.g. Screen, Projector..."
+                className="w-full rounded-lg border bg-background px-3 py-2 text-sm"
+                required
+              />
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                side="bottom"
+                align="end"
+                sideOffset={4}
+                className="z-50 min-w-[var(--radix-popover-trigger-width)] rounded-xl border border-border/50 bg-card p-1.5 shadow-xl max-h-40 overflow-y-auto animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+                onOpenAutoFocus={(e) => e.preventDefault()}
+              >
+                {filteredTypes.map(t => (
+                  <button key={t} type="button" onClick={() => handleTypeSelect(t)}
+                    className="w-full text-left px-3 py-2 text-sm rounded-lg hover:bg-accent focus:bg-accent focus:outline-none transition-colors">
+                    {t}
+                  </button>
+                ))}
+                {!exactMatch && (
+                  <button type="button" onClick={() => handleTypeSelect(typeInput.trim())}
+                    className="w-full text-left px-3 py-2 text-sm text-primary font-medium rounded-lg hover:bg-primary/5 border-t border-border/50 transition-colors">
+                    <Plus className="inline h-3 w-3 mr-1" /> Create "{typeInput.trim()}"
+                  </button>
+                )}
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1">Serial Number *</label>

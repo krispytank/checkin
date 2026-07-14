@@ -7,7 +7,7 @@ import {
   Settings, LogOut, X, Sun, Moon, ChevronDown,
   Home, Clock, MapPin, Briefcase, Building, Car, Truck,
   Package, MonitorCog, QrCode, PanelLeftClose, PanelLeft,
-  Shield, FolderOpen,
+  Shield,
 } from 'lucide-react';
 import { getInitials, cn } from '../lib/utils.js';
 import SidebarTooltip from './SidebarTooltip.jsx';
@@ -34,14 +34,6 @@ const equipmentNavigation = [
   { name: 'Dashboard', href: '/equipment/dashboard', icon: Clock },
   { name: 'Book Equipment', href: '/equipment/book', icon: Package },
   { name: 'Manage Bookings', href: '/equipment/manage', icon: FileText, roles: ['admin', 'supervisor', 'manager'] },
-];
-
-const fileMovementNavigation = [
-  { name: 'Dashboard', href: '/file-movement/dashboard', icon: Clock },
-  { name: 'Case Files', href: '/file-movement/case-files', icon: FolderOpen },
-  { name: 'File Requests', href: '/file-movement/requests', icon: FileText },
-  { name: 'Strong Room', href: '/file-movement/strong-room', icon: Shield, roles: ['admin', 'supervisor'] },
-  { name: 'Reports', href: '/file-movement/reports', icon: FileText, roles: ['admin', 'supervisor'] },
 ];
 
 const adminNavigation = [
@@ -72,12 +64,6 @@ const adminNavigation = [
     children: [
       { name: 'Vehicles', href: '/admin/fleet/vehicles', icon: Car },
       { name: 'Parking Spaces', href: '/admin/fleet/parking', icon: MapPin },
-    ],
-  },
-  {
-    name: 'File Movement', icon: FolderOpen,
-    children: [
-      { name: 'Registries', href: '/admin/file-movement/registries', icon: FolderOpen },
     ],
   },
   {
@@ -269,13 +255,11 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
     attendance: false,
     equipment: false,
     fleet: false,
-    fileMovement: false,
     admin: false,
     adminUsers: false,
     adminAttendance: false,
     adminEquipment: false,
     adminFleet: false,
-    adminFileMovement: false,
     adminAudit: false,
   });
 
@@ -293,12 +277,10 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
   const filteredAttendance = filterByModuleRole(timeAttendanceChildren, 'attendance');
   const filteredFleet = filterByModuleRole(fleetNavigation, 'fleet');
   const filteredEquipment = filterByModuleRole(equipmentNavigation, 'equipment');
-  const filteredFileMovement = filterByModuleRole(fileMovementNavigation, 'fileMovement');
 
   const isAttendanceChild = filteredAttendance.some(c => location === c.href);
   const isEquipmentChild = filteredEquipment.some(c => location === c.href);
   const isFleetChild = filteredFleet.some(c => location === c.href);
-  const isFileMovementChild = filteredFileMovement.some(c => location === c.href);
   const isAdminChild = adminNavigation.some(g => g.children.some(c => location === c.href));
 
   // Auto-expand sections containing the active route
@@ -309,7 +291,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
       if (isAttendanceChild) next.attendance = true;
       else if (isEquipmentChild) next.equipment = true;
       else if (isFleetChild) next.fleet = true;
-      else if (isFileMovementChild) next.fileMovement = true;
       else if (isAdminChild) {
         next.admin = true;
         // Also auto-expand the relevant admin sub-group
@@ -323,7 +304,7 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
 
       return next;
     });
-  }, [isAttendanceChild, isEquipmentChild, isFleetChild, isFileMovementChild, isAdminChild, location]);
+  }, [isAttendanceChild, isEquipmentChild, isFleetChild, isAdminChild, location]);
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -470,31 +451,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
           collapsed={collapsed}
         >
           {filteredFleet.map((item) => (
-            <NavLink
-              key={item.name}
-              href={item.href}
-              icon={item.icon}
-              label={item.name}
-              active={location === item.href}
-              collapsed={collapsed}
-              onClick={handleNavClick}
-              indent
-            />
-          ))}
-        </CollapsibleSection>
-        )}
-
-        {/* File Movement */}
-        {hasModuleAccess('fileMovement') && (
-        <CollapsibleSection
-          label="File Movement"
-          icon={FolderOpen}
-          isOpen={openSections.fileMovement}
-          onToggle={() => toggleSection('fileMovement')}
-          active={isFileMovementChild}
-          collapsed={collapsed}
-        >
-          {filteredFileMovement.map((item) => (
             <NavLink
               key={item.name}
               href={item.href}
@@ -735,30 +691,6 @@ export default function Sidebar({ collapsed, onToggleCollapse, mobileOpen, onMob
             collapsed={false}
           >
             {filteredFleet.map((item) => (
-              <NavLink
-                key={item.name}
-                href={item.href}
-                icon={item.icon}
-                label={item.name}
-                active={location === item.href}
-                collapsed={false}
-                onClick={handleNavClick}
-                indent
-              />
-            ))}
-          </CollapsibleSection>
-          )}
-
-          {hasModuleAccess('fileMovement') && (
-          <CollapsibleSection
-            label="File Movement"
-            icon={FolderOpen}
-            isOpen={openSections.fileMovement}
-            onToggle={() => toggleSection('fileMovement')}
-            active={isFileMovementChild}
-            collapsed={false}
-          >
-            {filteredFileMovement.map((item) => (
               <NavLink
                 key={item.name}
                 href={item.href}
